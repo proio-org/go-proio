@@ -1,3 +1,5 @@
+#!/bin/bash
+
 git clone https://git@$GO_PB_REPO_REF go-proio-pb
 
 mkdir tmp
