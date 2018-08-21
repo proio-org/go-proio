@@ -1,4 +1,8 @@
 # proio for Go
+[![Build Status](https://travis-ci.org/proio-org/go-proio.svg?branch=master)](https://travis-ci.org/proio-org/go-proio)
+[![codecov](https://codecov.io/gh/proio-org/go-proio/branch/master/graph/badge.svg)](https://codecov.io/gh/proio-org/go-proio)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/d56ae16ac3f848a3a91ee699c79a30cc)](https://www.codacy.com/project/decibelcooper/go-proio/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=proio-org/go-proio&amp;utm_campaign=Badge_Grade_Dashboard)
+
 ## API
 API documentation is provided by godoc.org
 
@@ -17,36 +21,3 @@ For information on what versions of Go are supported, please see the [Travis CI 
 * [Scan](example_scan_test.go)
 * [Skip](example_skip_test.go)
 * [Push, get, inspect](example_pushGetInspect_test.go)
-
-## Benchmarking
-```shell
-go test -v -run=^$ -bench=. -count=2
-```
-results in the following (on my Core i5 desktop):
-```
-goos: linux
-goarch: amd64
-pkg: github.com/proio-org/go-proio
-BenchmarkWriteUncomp-4                     10000            139903 ns/op
-BenchmarkWriteUncomp-4                     10000            122604 ns/op
-BenchmarkWriteLZ4-4                         5000            275437 ns/op
-BenchmarkWriteLZ4-4                         5000            278510 ns/op
-BenchmarkWriteGZIP-4                        5000           1364511 ns/op
-BenchmarkWriteGZIP-4                        5000           1365314 ns/op
-BenchmarkReadUncomp-4                       5000            254130 ns/op
-BenchmarkReadUncomp-4                       5000            244430 ns/op
-BenchmarkReadLZ4-4                          5000            249543 ns/op
-BenchmarkReadLZ4-4                          5000            247739 ns/op
-BenchmarkReadGZIP-4                         5000            434379 ns/op
-BenchmarkReadGZIP-4                         5000            437608 ns/op
-BenchmarkAddRemove100Entries-4             30000             65783 ns/op
-BenchmarkAddRemove100Entries-4             30000             51931 ns/op
-BenchmarkAddRemove1000Entries-4             3000            612425 ns/op
-BenchmarkAddRemove1000Entries-4             3000            541261 ns/op
-BenchmarkAddRemove10000Entries-4             200           6023315 ns/op
-BenchmarkAddRemove10000Entries-4             300           6985336 ns/op
-BenchmarkAddRemove100000Entries-4             20          61059149 ns/op
-BenchmarkAddRemove100000Entries-4             20          61536698 ns/op
-PASS
-ok      github.com/proio-org/go-proio 63.981s
-```
