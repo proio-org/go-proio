@@ -1,16 +1,20 @@
 branches:
     only:
         - master
+        - /^v.*$/
 
 stages:
     - name: go-pb-update
-      if: type = push
-    - name: test
+      if:
+        - type = push
+    - name: build
 
 matrix:
     include:
         - language: go
           stage: go-pb-update
+          branches:
+              only: master
           go: master
           sudo: true
           services:
@@ -21,7 +25,7 @@ matrix:
           script: bash -v ci/go-pb-update.sh
 
         - language: go
-          stage: test
+          stage: build
           go: 1.9.x
         - language: go
           go: 1.10.x
@@ -30,6 +34,27 @@ matrix:
               - go get -t ./...
           script: go test -v -race -covermode=atomic -coverprofile=coverage.txt
           after_success: bash <(curl -s https://codecov.io/bash)
+          before_deploy:
+              - cd $GOPATH/bin
+              - rm -rf *
+              - GOOS=linux GOARCH=amd64 go install github.com/proio-org/go-proio/tools/...
+              - tar -czf proio_tools-$TRAVIS_TAG-linux-amd64.tar.gz *
+              - GOOS=darwin GOARCH=amd64 go install github.com/proio-org/go-proio/tools/...
+              - cd darwin_amd64
+              - tar -czf ../proio_tools-$TRAVIS_TAG-darwin-amd64.tar.gz *
+              - GOOS=windows GOARCH=amd64 go install github.com/proio-org/go-proio/tools/...
+              - cd ../windows_amd64
+              - zip ../proio_tools-$TRAVIS_TAG-windows-amd64.zip *
+          deploy:
+              provider: releases
+              api_key: $RELEASE_ASSET_TOKEN
+              file:
+                  - $GOPATH/bin/proio_tools-$TRAVIS_TAG-linux-amd64.tar.gz
+                  - $GOPATH/bin/proio_tools-$TRAVIS_TAG-darwin-amd64.tar.gz
+                  - $GOPATH/bin/proio_tools-$TRAVIS_TAG-windows-amd64.zip
+              on:
+                  tags: true
+              overwrite: true
         - language: go
           go: master
 
