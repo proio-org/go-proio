@@ -20,4 +20,4 @@ For information on what versions of Go are supported, please see the [Travis CI 
 * [Print](example_print_test.go)
 * [Scan](example_scan_test.go)
 * [Skip](example_skip_test.go)
-* [Push, get, inspect](example_pushGetInspect_test.go)
+* [Push, get, inspect](example_push_get_inspect_test.go)
