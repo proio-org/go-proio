@@ -9,12 +9,17 @@ API documentation is provided by godoc.org
 [![GoDoc](https://godoc.org/github.com/proio-org/go-proio?status.svg)](https://godoc.org/github.com/proio-org/go-proio)
 
 ## Installation
-go-proio is `go get`-able.  Make sure you have go installed and `GOPATH` set up (described in [the main readme](../README.md)):
+go-proio and included [command-line tools](tools) are `go get`-able.  Make sure
+you have the `go` compiler installed and set up:
 ```shell
 go get github.com/proio-org/go-proio/...
 ```
 
-For information on what versions of Go are supported, please see the [Travis CI page](https://travis-ci.org/proio-org).
+If you do not have the `go` compiler, you can find pre-compiled binaries for
+the tools [in the releases](https://github.com/proio-org/go-proio/releases).
+
+For information on what versions of Go are supported, please see the [Travis CI
+page](https://travis-ci.org/proio-org/go-proio).
 
 ## Examples
 * [Print](example_print_test.go)
