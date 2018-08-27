@@ -12,6 +12,7 @@ import (
 
 	"github.com/pierrec/lz4"
 	proto "github.com/proio-org/go-proio-pb"
+	"github.com/smira/lzma"
 )
 
 type Compression int
@@ -20,6 +21,7 @@ const (
 	UNCOMPRESSED Compression = iota
 	GZIP
 	LZ4
+	LZMA
 )
 
 // Writer serves to write Events into a stream in the proio format.  The Writer
@@ -92,6 +94,8 @@ func NewWriter(streamWriter io.Writer) *Writer {
 // called even after writing some events.
 func (wrt *Writer) SetCompression(comp Compression) error {
 	switch comp {
+	case LZMA:
+		wrt.bucketHeader.Compression = proto.BucketHeader_LZMA
 	case GZIP:
 		wrt.bucketHeader.Compression = proto.BucketHeader_GZIP
 	case LZ4:
@@ -184,6 +188,12 @@ func (wrt *Writer) writeBucket() error {
 		lz4Writer := lz4.NewWriter(buffer)
 		lz4Writer.Write(bucketBytes)
 		lz4Writer.Close()
+		bucketBytes = buffer.Bytes()
+	case proto.BucketHeader_LZMA:
+		buffer := &bytes.Buffer{}
+		lzmaWriter := lzma.NewWriter(buffer)
+		lzmaWriter.Write(bucketBytes)
+		lzmaWriter.Close()
 		bucketBytes = buffer.Bytes()
 	}
 	header := wrt.bucketHeader
