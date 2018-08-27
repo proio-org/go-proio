@@ -75,6 +75,14 @@ func BenchmarkWriteGZIP(b *testing.B) {
 	doWrite(writer, b)
 }
 
+func BenchmarkWriteLZMA(b *testing.B) {
+	buffer := &bytes.Buffer{}
+	writer := NewWriter(buffer)
+	writer.SetCompression(LZMA)
+
+	doWrite(writer, b)
+}
+
 func BenchmarkReadUncomp(b *testing.B) {
 	buffer := &bytes.Buffer{}
 	writer := NewWriter(buffer)
@@ -99,6 +107,16 @@ func BenchmarkReadGZIP(b *testing.B) {
 	buffer := &bytes.Buffer{}
 	writer := NewWriter(buffer)
 	writer.SetCompression(GZIP)
+	doWrite(writer, b)
+
+	reader := NewReader(buffer)
+	doRead(reader, b)
+}
+
+func BenchmarkReadLZMA(b *testing.B) {
+	buffer := &bytes.Buffer{}
+	writer := NewWriter(buffer)
+	writer.SetCompression(LZMA)
 	doWrite(writer, b)
 
 	reader := NewReader(buffer)

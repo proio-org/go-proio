@@ -62,6 +62,7 @@ func main() {
 		log.Print(err)
 	}
 
+	fmt.Println("Number of LZMA buckets:", nBuckets[proto.BucketHeader_LZMA])
 	fmt.Println("Number of LZ4 buckets:", nBuckets[proto.BucketHeader_LZ4])
 	fmt.Println("Number of GZIP buckets:", nBuckets[proto.BucketHeader_GZIP])
 	fmt.Println("Number of uncompressed buckets:", nBuckets[proto.BucketHeader_NONE])
