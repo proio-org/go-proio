@@ -173,6 +173,26 @@ func TestGZIPPushSkipGet2(t *testing.T) {
 	eventPushSkipGet2(GZIP, t)
 }
 
+func TestLZMAPushGet1(t *testing.T) {
+	eventPushGet1(LZMA, t)
+}
+
+func TestLZMAPushGet2(t *testing.T) {
+	eventPushGet2(LZMA, t)
+}
+
+func TestLZMAPushGet3(t *testing.T) {
+	eventPushGet3(LZMA, t)
+}
+
+func TestLZMAPushSkipGet1(t *testing.T) {
+	eventPushSkipGet1(LZMA, t)
+}
+
+func TestLZMAPushSkipGet2(t *testing.T) {
+	eventPushSkipGet2(LZMA, t)
+}
+
 func eventPushGet1(comp Compression, t *testing.T) {
 	buffer := &bytes.Buffer{}
 	writer := NewWriter(buffer)
@@ -433,6 +453,10 @@ func TestWriteLZ4IterateFile(t *testing.T) {
 
 func TestWriteGZIPIterateFile(t *testing.T) {
 	writeIterateFile(GZIP, t)
+}
+
+func TestWriteLZMAIterateFile(t *testing.T) {
+	writeIterateFile(LZMA, t)
 }
 
 func TestWriteUncompIterateFile(t *testing.T) {
