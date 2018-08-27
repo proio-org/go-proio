@@ -11,6 +11,7 @@ import (
 
 	"github.com/pierrec/lz4"
 	proto "github.com/proio-org/go-proio-pb"
+	"github.com/smira/lzma"
 )
 
 // Reader serves to read Events from a stream in the proio format.  The Reader
@@ -311,6 +312,9 @@ func (rdr *Reader) readBucket(maxSkipEvents int) (eventsSkipped int, err error) 
 			lz4Rdr = lz4.NewReader(rdr.bucket)
 		}
 		rdr.bucketReader = lz4Rdr
+	case proto.BucketHeader_LZMA:
+        lzmaRdr := lzma.NewReader(rdr.bucket)
+		rdr.bucketReader = lzmaRdr
 	default:
 		rdr.bucketReader = rdr.bucket
 	}
