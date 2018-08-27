@@ -1,3 +1,3 @@
 [submodule "proio"]
-	path = proio
+	path = proto
 	url = https://github.com/proio-org/proio.git
