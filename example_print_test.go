@@ -33,52 +33,52 @@ func Example_print() {
 	// Output:
     // ---------- TAG: GenStable ----------
     // ID: 2
-    // Entry type: eic.Particle
+    // Entry type: proio.model.eic.Particle
     // parent: 1
     // pdg: 11                             
     //            
     // ID: 3      
-    // Entry type: eic.Particle
+    // Entry type: proio.model.eic.Particle
     // parent: 1
     // pdg: -11                            
     //      
     // ---------- TAG: MC ----------       
     // ID: 1     
-    // Entry type: eic.Particle
+    // Entry type: proio.model.eic.Particle
     // child: 2
     // child: 3
     // pdg: 443                            
     //           
     // ID: 2   
-    // Entry type: eic.Particle
+    // Entry type: proio.model.eic.Particle
     // parent: 1    
     // pdg: 11                                               
     //                            
     // ID: 3
-    // Entry type: eic.Particle
+    // Entry type: proio.model.eic.Particle
     // parent: 1
     // pdg: -11
 
     // ---------- TAG: Particle ----------
     // ID: 1
-    // Entry type: eic.Particle
+    // Entry type: proio.model.eic.Particle
     // child: 2
     // child: 3
     // pdg: 443
 
     // ID: 2
-    // Entry type: eic.Particle
+    // Entry type: proio.model.eic.Particle
     // parent: 1
     // pdg: 11
 
     // ID: 3
-    // Entry type: eic.Particle
+    // Entry type: proio.model.eic.Particle
     // parent: 1
     // pdg: -11
 
     // ---------- TAG: Primary ----------
     // ID: 1
-    // Entry type: eic.Particle
+    // Entry type: proio.model.eic.Particle
     // child: 2
     // child: 3
     // pdg: 443

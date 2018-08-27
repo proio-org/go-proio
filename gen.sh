@@ -8,6 +8,13 @@ mkdir tmp
 # Generate protobuf message code
 rm -rf go-proio-pb/*
 for proto in $(find proio -iname "*.proto"); do
+    if [ -z "$(grep -i go_package $proto)" ]; then
+        go_package=$(basename ${proto%.proto})
+        if [ "$go_package" == "proio" ]; then
+            go_package=proto
+        fi
+        echo "option go_package = \"$go_package\";" >> $proto
+    fi
     protoc --gofast_out=tmp $proto
 done
 

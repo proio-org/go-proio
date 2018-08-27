@@ -38,13 +38,13 @@ func Example_skip() {
 	// Output:
 	// ---------- TAG: Particle ----------
 	// ID: 1
-	// Entry type: eic.Particle
+	// Entry type: proio.model.eic.Particle
 	// pdg: 443
 	// charge: 4
 	//
 	// ---------- TAG: Particle ----------
 	// ID: 1
-	// Entry type: eic.Particle
+	// Entry type: proio.model.eic.Particle
 	// pdg: 443
 	// charge: 1
 }
