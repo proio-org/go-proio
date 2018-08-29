@@ -1,7 +1,7 @@
 # proio for Go
 [![Build Status](https://travis-ci.org/proio-org/go-proio.svg?branch=master)](https://travis-ci.org/proio-org/go-proio)
 [![codecov](https://codecov.io/gh/proio-org/go-proio/branch/master/graph/badge.svg)](https://codecov.io/gh/proio-org/go-proio)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/d56ae16ac3f848a3a91ee699c79a30cc)](https://www.codacy.com/project/decibelcooper/go-proio/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=proio-org/go-proio&amp;utm_campaign=Badge_Grade_Dashboard)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/706bdf4f827c4bb7adbae4bdc6b07662)](https://www.codacy.com/app/proio-org/go-proio?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=proio-org/go-proio&amp;utm_campaign=Badge_Grade)
 
 ## API
 API documentation is provided by godoc.org
