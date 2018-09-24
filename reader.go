@@ -313,7 +313,7 @@ func (rdr *Reader) readBucket(maxSkipEvents int) (eventsSkipped int, err error) 
 		}
 		rdr.bucketReader = lz4Rdr
 	case proto.BucketHeader_LZMA:
-        lzmaRdr := lzma.NewReader(rdr.bucket)
+		lzmaRdr := lzma.NewReader(rdr.bucket)
 		rdr.bucketReader = lzmaRdr
 	default:
 		rdr.bucketReader = rdr.bucket
