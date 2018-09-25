@@ -67,7 +67,7 @@ func main() {
 	if *event >= 0 {
 		singleEvent = true
 		startingEvent = *event
-		if _, err = reader.Skip(*event); err != nil {
+		if _, err = reader.Skip(uint64(*event)); err != nil {
 			log.Fatal(err)
 		}
 	}
