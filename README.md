@@ -3,6 +3,8 @@
 [![codecov](https://codecov.io/gh/proio-org/go-proio/branch/master/graph/badge.svg)](https://codecov.io/gh/proio-org/go-proio)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/706bdf4f827c4bb7adbae4bdc6b07662)](https://www.codacy.com/app/proio-org/go-proio?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=proio-org/go-proio&amp;utm_campaign=Badge_Grade)
 
+Please see the [main proio repository](https://github.com/proio-org/proio) for general information on proio.
+
 ## API
 API documentation is provided by godoc.org
 
