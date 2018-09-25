@@ -9,14 +9,14 @@ import (
 	prolcio "github.com/proio-org/go-proio-pb/model/lcio"
 )
 
-func doWrite(writer *Writer, b *testing.B) {
-	if b.N < 5000 {
-		b.N = 5000
+func doWrite(writer *Writer, b *testing.B, n int) {
+	if b.N < 1000 {
+		b.N = 1000
 	}
 
 	event := NewEvent()
 
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < n-1; i++ {
 		event.AddEntry("SimCaloHits", &prolcio.SimCalorimeterHit{
 			Energy: rand.Float32(),
 			Pos: []float32{
@@ -51,73 +51,91 @@ func doRead(reader *Reader, b *testing.B) {
 	}
 }
 
-func BenchmarkWriteUncomp(b *testing.B) {
+func BenchmarkWrite1000EntriesUncomp(b *testing.B) {
 	buffer := &bytes.Buffer{}
 	writer := NewWriter(buffer)
 	writer.SetCompression(UNCOMPRESSED)
 
-	doWrite(writer, b)
+	doWrite(writer, b, 1000)
 }
 
-func BenchmarkWriteLZ4(b *testing.B) {
-	buffer := &bytes.Buffer{}
-	writer := NewWriter(buffer)
-	writer.SetCompression(LZ4)
-
-	doWrite(writer, b)
-}
-
-func BenchmarkWriteGZIP(b *testing.B) {
-	buffer := &bytes.Buffer{}
-	writer := NewWriter(buffer)
-	writer.SetCompression(GZIP)
-
-	doWrite(writer, b)
-}
-
-func BenchmarkWriteLZMA(b *testing.B) {
-	buffer := &bytes.Buffer{}
-	writer := NewWriter(buffer)
-	writer.SetCompression(LZMA)
-
-	doWrite(writer, b)
-}
-
-func BenchmarkReadUncomp(b *testing.B) {
+func BenchmarkWrite10000EntriesUncomp(b *testing.B) {
 	buffer := &bytes.Buffer{}
 	writer := NewWriter(buffer)
 	writer.SetCompression(UNCOMPRESSED)
-	doWrite(writer, b)
 
-	reader := NewReader(buffer)
-	doRead(reader, b)
+	doWrite(writer, b, 10000)
 }
 
-func BenchmarkReadLZ4(b *testing.B) {
+func BenchmarkWrite1000EntriesLZ4(b *testing.B) {
 	buffer := &bytes.Buffer{}
 	writer := NewWriter(buffer)
 	writer.SetCompression(LZ4)
-	doWrite(writer, b)
 
-	reader := NewReader(buffer)
-	doRead(reader, b)
+	doWrite(writer, b, 1000)
 }
 
-func BenchmarkReadGZIP(b *testing.B) {
+func BenchmarkWrite1000EntriesGZIP(b *testing.B) {
 	buffer := &bytes.Buffer{}
 	writer := NewWriter(buffer)
 	writer.SetCompression(GZIP)
-	doWrite(writer, b)
+
+	doWrite(writer, b, 1000)
+}
+
+func BenchmarkWrite1000EntriesLZMA(b *testing.B) {
+	buffer := &bytes.Buffer{}
+	writer := NewWriter(buffer)
+	writer.SetCompression(LZMA)
+
+	doWrite(writer, b, 1000)
+}
+
+func BenchmarkReadWith1000EntriesUncomp(b *testing.B) {
+	buffer := &bytes.Buffer{}
+	writer := NewWriter(buffer)
+	writer.SetCompression(UNCOMPRESSED)
+	doWrite(writer, b, 1000)
 
 	reader := NewReader(buffer)
 	doRead(reader, b)
 }
 
-func BenchmarkReadLZMA(b *testing.B) {
+func BenchmarkReadWith10000EntriesUncomp(b *testing.B) {
+	buffer := &bytes.Buffer{}
+	writer := NewWriter(buffer)
+	writer.SetCompression(UNCOMPRESSED)
+	doWrite(writer, b, 10000)
+
+	reader := NewReader(buffer)
+	doRead(reader, b)
+}
+
+func BenchmarkReadWith1000EntriesLZ4(b *testing.B) {
+	buffer := &bytes.Buffer{}
+	writer := NewWriter(buffer)
+	writer.SetCompression(LZ4)
+	doWrite(writer, b, 1000)
+
+	reader := NewReader(buffer)
+	doRead(reader, b)
+}
+
+func BenchmarkReadWith1000EntriesGZIP(b *testing.B) {
+	buffer := &bytes.Buffer{}
+	writer := NewWriter(buffer)
+	writer.SetCompression(GZIP)
+	doWrite(writer, b, 1000)
+
+	reader := NewReader(buffer)
+	doRead(reader, b)
+}
+
+func BenchmarkReadWith1000EntriesLZMA(b *testing.B) {
 	buffer := &bytes.Buffer{}
 	writer := NewWriter(buffer)
 	writer.SetCompression(LZMA)
-	doWrite(writer, b)
+	doWrite(writer, b, 1000)
 
 	reader := NewReader(buffer)
 	doRead(reader, b)
