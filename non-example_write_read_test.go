@@ -464,7 +464,7 @@ func TestWriteUncompIterateFile(t *testing.T) {
 }
 
 func writeIterateFile(comp Compression, t *testing.T) {
-	nEvents := 5
+	nEvents := 10
 
 	tmpDir, err := ioutil.TempDir("", "proiotest")
 	if err != nil {
@@ -480,24 +480,34 @@ func writeIterateFile(comp Compression, t *testing.T) {
 	}
 	writer.SetCompression(comp)
 	event := NewEvent()
-	for i := 0; i < nEvents; i++ {
+	writer.Push(event)
+	writer.Push(event)
+	writer.Flush()
+	writer.Push(event)
+	writer.Push(event)
+	writer.Flush()
+	for i := 0; i < nEvents-4; i++ {
 		writer.Push(event)
 	}
 	writer.Close()
-
-	nEvents = 0
 
 	reader, err := Open(tmpFile)
 	if err != nil {
 		t.Error(err)
 	}
+
+	eventCount := 0
+	reader.Skip(1)
+	reader.Next()
+	reader.Skip(2)
+	eventCount += 4
 	for range reader.ScanEvents() {
-		nEvents++
+		eventCount++
 	}
 	reader.Close()
 
-	if nEvents != 5 {
-		t.Errorf("nEvents is %v instead of 5", nEvents)
+	if eventCount != nEvents {
+		t.Errorf("eventCount is %v instead of %v", eventCount, nEvents)
 	}
 }
 
