@@ -30,7 +30,7 @@ type Reader struct {
 	EvtScanBufSize        int
 	deferredUntilStopScan []func()
 
-	deferredUntilClose []func() error
+	deferredUntilClose []func()
 
 	sync.Mutex
 }
@@ -45,7 +45,9 @@ func Open(filename string) (*Reader, error) {
 		return nil, err
 	}
 
-	return NewReader(file), nil
+	reader := NewReader(file)
+	reader.deferUntilClose(func() { file.Close() })
+	return reader, nil
 }
 
 // NewReader wraps an existing io.Reader for reading proio Events.  Either Open
@@ -59,6 +61,7 @@ func NewReader(streamReader io.Reader) *Reader {
 		Err:            make(chan error, evtScanBufferSize),
 		EvtScanBufSize: evtScanBufferSize,
 	}
+	rdr.deferUntilClose(func() { close(rdr.Err) })
 
 	return rdr
 }
@@ -68,10 +71,10 @@ func NewReader(streamReader io.Reader) *Reader {
 // NewReader.
 func (rdr *Reader) Close() {
 	rdr.StopScan()
-	closer, ok := rdr.streamReader.(io.Closer)
-	if ok {
-		closer.Close()
+	for _, thisFunc := range rdr.deferredUntilClose {
+		thisFunc()
 	}
+	rdr.deferredUntilClose = nil
 }
 
 // Next retrieves the next event from the stream.
@@ -202,7 +205,11 @@ func (rdr *Reader) StopScan() {
 	for _, thisFunc := range rdr.deferredUntilStopScan {
 		thisFunc()
 	}
-	rdr.deferredUntilStopScan = make([]func(), 0)
+	rdr.deferredUntilStopScan = nil
+}
+
+func (rdr *Reader) deferUntilClose(thisFunc func()) {
+	rdr.deferredUntilClose = append(rdr.deferredUntilClose, thisFunc)
 }
 
 var evtScanBufferSize int = 100
@@ -357,9 +364,6 @@ func (rdr *Reader) syncToMagic() (int, error) {
 	return nRead, nil
 }
 
-func (rdr *Reader) deferUntilClose(thisFunc func() error) {
-	rdr.deferredUntilClose = append(rdr.deferredUntilClose, thisFunc)
-}
 func readBytes(rdr io.Reader, buf []byte) error {
 	tot := 0
 	for tot < len(buf) {
