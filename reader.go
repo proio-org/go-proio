@@ -18,11 +18,12 @@ import (
 // is not inherently thread safe, but it conveniently embeds sync.Mutex so that
 // it can be locked and unlocked.
 type Reader struct {
+	BucketHeader     *proto.BucketHeader
 	streamReader     io.Reader
 	bucket           *bytes.Reader
 	bucketReader     io.Reader
-	bucketHeader     *proto.BucketHeader
-	bucketEventsRead int
+	bucketEventsRead uint64
+	bucketIndex      uint64
 	metadata         map[string][]byte
 
 	Err                   chan error
@@ -74,48 +75,54 @@ func (rdr *Reader) Close() {
 }
 
 // Next retrieves the next event from the stream.
-func (rdr *Reader) Next() (*Event, error) {
-	return rdr.readFromBucket(true)
-}
+func (rdr *Reader) Next() (event *Event, err error) {
+	// use Skip() to ensure that we land on a non-empty bucket
+	if _, err = rdr.Skip(0); err == nil {
+		if rdr.bucket.Size() == 0 {
+			rdr.readBucket()
+		}
 
-// NextHeader returns the next bucket header from the stream, and discards the
-// bucket payload.
-func (rdr *Reader) NextHeader() (*proto.BucketHeader, error) {
-	if _, err := rdr.readBucket(1 << 62); err != nil {
-		return nil, err
+		event, err = rdr.readFromBucket()
 	}
-	return rdr.bucketHeader, nil
+
+	return
 }
 
 // Skip skips nEvents events.  If the return error is nil, nEvents have been
 // skipped.
-func (rdr *Reader) Skip(nEvents int) (nSkipped int, err error) {
-	bucketEventsLeft := 0
-	if rdr.bucketHeader != nil {
-		bucketEventsLeft = int(rdr.bucketHeader.NEvents) - rdr.bucketEventsRead
-	}
-	if nEvents > bucketEventsLeft {
-		nSkipped += bucketEventsLeft
-		for {
-			var n int
-			n, err = rdr.readBucket(nEvents - nSkipped)
-			if err != nil {
-				return
-			}
-			if n == 0 {
-				break
-			}
-			nSkipped += n
-		}
-	}
+func (rdr *Reader) Skip(nEvents uint64) (nSkipped uint64, err error) {
+	startIndex := rdr.bucketIndex
+	rdr.bucketIndex += nEvents
 
-	for nSkipped < nEvents {
-		_, err = rdr.readFromBucket(false)
-		if err != nil {
+	// loop while until reaching a bucket header that describes a bucket
+	// containg the event being skipped to
+	for rdr.BucketHeader == nil || rdr.bucketIndex >= rdr.BucketHeader.NEvents {
+		if rdr.BucketHeader != nil {
+			nBucketEvents := rdr.BucketHeader.NEvents
+			rdr.bucketIndex -= nBucketEvents
+			nSkipped += nBucketEvents - startIndex
+
+			// skip the bucket bytes on the stream if they haven't been read
+			// into memory already
+			if nBucketEvents > 0 && rdr.bucket.Size() == 0 {
+				seeker, ok := rdr.streamReader.(io.Seeker)
+				if ok {
+					seekBytes(seeker, int64(rdr.BucketHeader.BucketSize))
+				} else {
+					bucketBytes := make([]byte, rdr.BucketHeader.BucketSize)
+					if err = readBytes(rdr.streamReader, bucketBytes); err != nil {
+						return
+					}
+				}
+			}
+		}
+
+		if err = rdr.readHeader(); err != nil {
 			return
 		}
-		nSkipped++
+		startIndex = 0
 	}
+	nSkipped += rdr.bucketIndex - startIndex
 
 	return
 }
@@ -138,7 +145,11 @@ func (rdr *Reader) SeekToStart() error {
 		}
 	}
 
-	rdr.readBucket(0)
+	rdr.metadata = make(map[string][]byte)
+	rdr.bucketIndex = 0
+	if err := rdr.readHeader(); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -200,49 +211,45 @@ func (rdr *Reader) deferUntilStopScan(thisFunc func()) {
 	rdr.deferredUntilStopScan = append(rdr.deferredUntilStopScan, thisFunc)
 }
 
-func (rdr *Reader) readFromBucket(doUnmarshal bool) (*Event, error) {
-	protoSizeBuf := make([]byte, 4)
-	if err := readBytes(rdr.bucketReader, protoSizeBuf); err != nil {
-		if err == io.EOF {
-			_, err = rdr.readBucket(0)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			return nil, err
-		}
+func (rdr *Reader) readFromBucket() (*Event, error) {
+	var event *Event
 
+	for rdr.bucketEventsRead <= rdr.bucketIndex {
+		protoSizeBuf := make([]byte, 4)
 		if err := readBytes(rdr.bucketReader, protoSizeBuf); err != nil {
 			return nil, err
 		}
-	}
 
-	protoSize := binary.LittleEndian.Uint32(protoSizeBuf)
+		protoSize := binary.LittleEndian.Uint32(protoSizeBuf)
 
-	protoBuf := make([]byte, protoSize)
-	if err := readBytes(rdr.bucketReader, protoBuf); err != nil {
-		return nil, err
-	}
-	rdr.bucketEventsRead++
-
-	var event *Event
-	if doUnmarshal {
-		eventProto := &proto.Event{}
-		if err := eventProto.Unmarshal(protoBuf); err != nil {
+		protoBuf := make([]byte, protoSize)
+		if err := readBytes(rdr.bucketReader, protoBuf); err != nil {
 			return nil, err
 		}
 
-		event = newEventFromProto(eventProto)
-		for key, bytes := range rdr.metadata {
-			event.Metadata[key] = bytes
+		if rdr.bucketEventsRead == rdr.bucketIndex {
+			eventProto := &proto.Event{}
+			if err := eventProto.Unmarshal(protoBuf); err != nil {
+				return nil, err
+			}
+
+			event = newEventFromProto(eventProto)
+			for key, bytes := range rdr.metadata {
+				event.Metadata[key] = bytes
+			}
 		}
+
+		rdr.bucketEventsRead++
 	}
+	rdr.bucketIndex++
 
 	return event, nil
 }
 
-func (rdr *Reader) readBucket(maxSkipEvents int) (eventsSkipped int, err error) {
+func (rdr *Reader) readHeader() (err error) {
 	rdr.bucketEventsRead = 0
+	rdr.BucketHeader = nil
+	rdr.bucket = &bytes.Reader{}
 
 	// Find and read magic bytes for synchronization
 	_, err = rdr.syncToMagic()
@@ -261,38 +268,30 @@ func (rdr *Reader) readBucket(maxSkipEvents int) (eventsSkipped int, err error) 
 	if err = readBytes(rdr.streamReader, headerBuf); err != nil {
 		return
 	}
-	rdr.bucketHeader = &proto.BucketHeader{}
-	if err = rdr.bucketHeader.Unmarshal(headerBuf); err != nil {
+	bucketHeader := &proto.BucketHeader{}
+	if err = bucketHeader.Unmarshal(headerBuf); err != nil {
 		return
 	}
+	rdr.BucketHeader = bucketHeader
 
 	// Set metadata for future events
-	for key, bytes := range rdr.bucketHeader.Metadata {
+	for key, bytes := range rdr.BucketHeader.Metadata {
 		rdr.metadata[key] = bytes
 	}
 
-	// Either read or skip bucket bytes
-	if int(rdr.bucketHeader.NEvents) > maxSkipEvents {
-		bucketBytes := make([]byte, rdr.bucketHeader.BucketSize)
-		if err = readBytes(rdr.streamReader, bucketBytes); err != nil {
-			return
-		}
-		rdr.bucket.Reset(bucketBytes)
-	} else {
-		rdr.bucketReader = &bytes.Buffer{}
-		eventsSkipped = int(rdr.bucketHeader.NEvents)
-		seeker, ok := rdr.streamReader.(io.Seeker)
-		if ok {
-			seekBytes(seeker, int64(rdr.bucketHeader.BucketSize))
-		} else {
-			bucketBytes := make([]byte, rdr.bucketHeader.BucketSize)
-			err = readBytes(rdr.streamReader, bucketBytes)
-		}
+	return
+}
+
+func (rdr *Reader) readBucket() (err error) {
+	// read bucket bytes
+	bucketBytes := make([]byte, rdr.BucketHeader.BucketSize)
+	if err = readBytes(rdr.streamReader, bucketBytes); err != nil {
 		return
 	}
+	rdr.bucket.Reset(bucketBytes)
 
 	// Set up decompression for bucket
-	switch rdr.bucketHeader.Compression {
+	switch rdr.BucketHeader.Compression {
 	case proto.BucketHeader_GZIP:
 		gzipRdr, ok := rdr.bucketReader.(*gzip.Reader)
 		if ok {
@@ -315,8 +314,10 @@ func (rdr *Reader) readBucket(maxSkipEvents int) (eventsSkipped int, err error) 
 	case proto.BucketHeader_LZMA:
 		lzmaRdr := lzma.NewReader(rdr.bucket)
 		rdr.bucketReader = lzmaRdr
-	default:
+	case proto.BucketHeader_NONE:
 		rdr.bucketReader = rdr.bucket
+	default:
+		err = errors.New("unknown bucket compression type")
 	}
 
 	return
@@ -356,6 +357,9 @@ func (rdr *Reader) syncToMagic() (int, error) {
 	return nRead, nil
 }
 
+func (rdr *Reader) deferUntilClose(thisFunc func() error) {
+	rdr.deferredUntilClose = append(rdr.deferredUntilClose, thisFunc)
+}
 func readBytes(rdr io.Reader, buf []byte) error {
 	tot := 0
 	for tot < len(buf) {
@@ -383,8 +387,4 @@ func seekBytes(seeker io.Seeker, nBytes int64) error {
 		}
 	}
 	return nil
-}
-
-func (rdr *Reader) deferUntilClose(thisFunc func() error) {
-	rdr.deferredUntilClose = append(rdr.deferredUntilClose, thisFunc)
 }

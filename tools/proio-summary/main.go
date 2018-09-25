@@ -49,8 +49,10 @@ func main() {
 	nEvents := 0
 	nFDs := 0
 
-	var header *proto.BucketHeader
-	for header, err = reader.NextHeader(); header != nil; header, err = reader.NextHeader() {
+	reader.Skip(0)
+	for reader.BucketHeader != nil {
+		header := reader.BucketHeader
+
 		if err != nil {
 			log.Print(err)
 		}
@@ -58,6 +60,8 @@ func main() {
 		nBuckets[header.Compression]++
 		nEvents += int(header.NEvents)
 		nFDs += len(header.FileDescriptor)
+
+		reader.Skip(header.NEvents)
 	}
 
 	if err != nil && err != io.EOF {
