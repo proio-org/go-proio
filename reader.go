@@ -286,6 +286,13 @@ func (rdr *Reader) readHeader() (err error) {
 		rdr.metadata[key] = bytes
 	}
 
+	// Add descriptors to pool
+	for _, fdBytes := range rdr.BucketHeader.FileDescriptor {
+		if err = addFDFromBytes(fdBytes); err != nil {
+			return
+		}
+	}
+
 	return
 }
 

@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"sync"
 
+	protobuf "github.com/golang/protobuf/proto"
 	"github.com/pierrec/lz4"
 	proto "github.com/proio-org/go-proio-pb"
 	"github.com/smira/lzma"
@@ -32,6 +33,7 @@ type Writer struct {
 	bucket       *bytes.Buffer
 	bucketHeader proto.BucketHeader
 	metadata     map[string][]byte
+	writtenFDs   map[protobuf.Message]bool
 
 	deferredUntilClose []func() error
 
@@ -82,6 +84,7 @@ func NewWriter(streamWriter io.Writer) *Writer {
 		streamWriter: streamWriter,
 		bucket:       &bytes.Buffer{},
 		metadata:     make(map[string][]byte),
+		writtenFDs:   make(map[protobuf.Message]bool),
 	}
 
 	writer.SetCompression(GZIP)
@@ -109,6 +112,10 @@ func (wrt *Writer) SetCompression(comp Compression) error {
 	return nil
 }
 
+type getDependencyer interface {
+	GetDependency() []string
+}
+
 // Serialize the given Event.  Once this is performed, changes to the Event in
 // memory are not reflected in the output stream.
 func (wrt *Writer) Push(event *Event) error {
@@ -119,7 +126,7 @@ func (wrt *Writer) Push(event *Event) error {
 		}
 	}
 
-	event.flushCache()
+	event.FlushCache()
 	protoBuf, err := event.proto.Marshal()
 	if err != nil {
 		return err
@@ -127,6 +134,41 @@ func (wrt *Writer) Push(event *Event) error {
 
 	protoSizeBuf := make([]byte, 4)
 	binary.LittleEndian.PutUint32(protoSizeBuf, uint32(len(protoBuf)))
+
+	// add new protobuf FileDescriptorProtos to the stream that are required to
+	// describe the event data
+	newFDs := make(map[protobuf.Message]bool)
+	var addFDsToSet func(fd getDependencyer)
+	addFDsToSet = func(fd getDependencyer) {
+		for _, depName := range fd.GetDependency() {
+			depFD, ok := fdProtoStore.Load(depName)
+			if ok {
+				addFDsToSet(depFD.(getDependencyer))
+			}
+		}
+
+		fdMsg := fd.(protobuf.Message)
+		if _, ok := wrt.writtenFDs[fdMsg]; !ok {
+			newFDs[fdMsg] = true
+			wrt.writtenFDs[fdMsg] = true
+		}
+	}
+	for _, typeName := range event.proto.Type {
+		fdProto, ok := fdProtoForTypeStore.Load(typeName)
+		if ok {
+			addFDsToSet(fdProto.(getDependencyer))
+		}
+	}
+	if len(newFDs) > 0 {
+		wrt.Flush()
+	}
+	for fdProto := range newFDs {
+		fdBytes, err := protobuf.Marshal(fdProto)
+		if err != nil {
+			return errors.New("Unable to marshal file descriptor proto")
+		}
+		wrt.bucketHeader.FileDescriptor = append(wrt.bucketHeader.FileDescriptor, fdBytes)
+	}
 
 	writeBytes(wrt.bucket, protoSizeBuf)
 	writeBytes(wrt.bucket, protoBuf)
@@ -221,6 +263,7 @@ func (wrt *Writer) writeBucket() error {
 
 	wrt.bucketHeader.NEvents = 0
 	wrt.bucketHeader.Metadata = make(map[string][]byte)
+	wrt.bucketHeader.FileDescriptor = nil
 	wrt.bucket.Reset()
 
 	return nil

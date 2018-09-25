@@ -26,8 +26,8 @@ func printUsage() {
 proio-strip will take an input proio file and either strip away entries with
 specific tags, or keep only entries with specific tags.  It can also be used to
 simply re-encode the proio stream by omitting tags.  By default, the output
-stream is pushed to stdout, but the -o option can be used to create a file
-descriptor for a specified path.
+stream is pushed to stdout, but the -o option can be used to create a file at a
+specified path.
 
 options:
 `,
