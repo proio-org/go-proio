@@ -8,8 +8,13 @@ import (
 	"log"
 	"os"
 
+	protobuf "github.com/golang/protobuf/proto"
 	"github.com/proio-org/go-proio"
 	proto "github.com/proio-org/go-proio-pb"
+)
+
+var (
+	printFileDescriptors = flag.Bool("f", false, "print FileDescriptorProtos as strings")
 )
 
 func printUsage() {
@@ -74,4 +79,12 @@ func main() {
 	fmt.Println("Number of uncompressed buckets:", nBuckets[proto.BucketHeader_NONE])
 	fmt.Println("Number of events:", nEvents)
 	fmt.Println("Number of FileDescriptorProtos:", nFDs)
+
+	fmt.Println()
+	if *printFileDescriptors {
+		protos := proio.StoredFileDescriptorProtos()
+		for _, proto := range protos {
+			fmt.Println(protobuf.MarshalTextString(proto))
+		}
+	}
 }

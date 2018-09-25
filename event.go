@@ -4,13 +4,18 @@ package proio // import "github.com/proio-org/go-proio"
 //go:generate bash gen.sh
 
 import (
+	"bytes"
+	"compress/gzip"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"reflect"
 	"sort"
 	"strconv"
+	"sync"
 
 	protobuf "github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	proto "github.com/proio-org/go-proio-pb"
 )
 
@@ -30,18 +35,7 @@ type Event struct {
 
 // NewEvent is required for constructing an Event.
 func NewEvent() *Event {
-	return &Event{
-		Metadata: make(map[string][]byte),
-		proto: &proto.Event{
-			Entry: make(map[uint64]*proto.Any),
-			Type:  make(map[uint64]string),
-			Tag:   make(map[string]*proto.Tag),
-		},
-		revTypeLookup:  make(map[string]uint64),
-		entryTypeCache: make(map[uint64]reflect.Type),
-		entryCache:     make(map[uint64]protobuf.Message),
-		dirtyTags:      false,
-	}
+	return newEventFromProto(&proto.Event{})
 }
 
 // AddEntry takes a single primary tag for an entry and an entry protobuf
@@ -207,6 +201,37 @@ func (evt *Event) DeleteTag(tag string) {
 	delete(evt.proto.Tag, tag)
 }
 
+// FlushCache forces all event entries to be serialized, among other things.
+// This is useful for putting the main serialization load into parallel
+// routines before aggregating the events into an output stream
+func (evt *Event) FlushCache() {
+	for id, entry := range evt.entryCache {
+		selfSerializingEntry, ok := entry.(protobuf.Marshaler)
+		var bytes []byte
+		if ok {
+			bytes, _ = selfSerializingEntry.Marshal()
+		} else {
+			bytes, _ = protobuf.Marshal(entry)
+		}
+		evt.proto.Entry[id].Payload = bytes
+	}
+	evt.entryCache = make(map[uint64]protobuf.Message)
+
+	evt.tagCleanup()
+}
+
+// StoredFileDescriptorProtos returns a slice of protobuf messages that
+// represent all of the entry types collected by reading files or looking up
+// FileDescriptorProtos from memory
+func StoredFileDescriptorProtos() []protobuf.Message {
+	var fdProtos []protobuf.Message
+	fdProtoStore.Range(func(key, value interface{}) bool {
+		fdProtos = append(fdProtos, value.(protobuf.Message))
+		return true
+	})
+	return fdProtos
+}
+
 func (evt *Event) String() string {
 	var printString string
 
@@ -241,12 +266,14 @@ func newEventFromProto(eventProto *proto.Event) *Event {
 	if eventProto.Tag == nil {
 		eventProto.Tag = make(map[string]*proto.Tag)
 	}
+
 	return &Event{
 		Metadata:       make(map[string][]byte),
 		proto:          eventProto,
 		revTypeLookup:  make(map[string]uint64),
 		entryTypeCache: make(map[uint64]reflect.Type),
 		entryCache:     make(map[uint64]protobuf.Message),
+		dirtyTags:      false,
 	}
 }
 
@@ -264,6 +291,10 @@ func (evt *Event) getPrototype(id uint64) protobuf.Message {
 	return reflect.New(entryType).Interface().(protobuf.Message)
 }
 
+type descriptorer interface {
+	Descriptor() ([]byte, []int)
+}
+
 func (evt *Event) getTypeID(entry protobuf.Message) uint64 {
 	typeName := protobuf.MessageName(entry)
 	typeID, ok := evt.revTypeLookup[typeName]
@@ -279,25 +310,22 @@ func (evt *Event) getTypeID(entry protobuf.Message) uint64 {
 		typeID = evt.proto.NTypes
 		evt.proto.Type[typeID] = typeName
 		evt.revTypeLookup[typeName] = typeID
+
+		_, ok := fdProtoForTypeStore.Load(typeName)
+		if !ok {
+			descEntry, ok := entry.(descriptorer)
+			if ok {
+				fdComp, _ := descEntry.Descriptor()
+
+				gzipReader, _ := gzip.NewReader(bytes.NewReader(fdComp))
+				fdBytes, _ := ioutil.ReadAll(gzipReader)
+
+				addFDFromBytes(fdBytes)
+			}
+		}
 	}
 
 	return typeID
-}
-
-func (evt *Event) flushCache() {
-	for id, entry := range evt.entryCache {
-		selfSerializingEntry, ok := entry.(protobuf.Marshaler)
-		var bytes []byte
-		if ok {
-			bytes, _ = selfSerializingEntry.Marshal()
-		} else {
-			bytes, _ = protobuf.Marshal(entry)
-		}
-		evt.proto.Entry[id].Payload = bytes
-	}
-	evt.entryCache = make(map[uint64]protobuf.Message)
-
-	evt.tagCleanup()
 }
 
 func (evt *Event) tagCleanup() {
@@ -312,4 +340,23 @@ func (evt *Event) tagCleanup() {
 		}
 	}
 	evt.dirtyTags = false
+}
+
+var (
+	fdProtoStore        sync.Map
+	fdProtoForTypeStore sync.Map
+)
+
+func addFDFromBytes(fdBytes []byte) (err error) {
+	fdProto := &descriptor.FileDescriptorProto{}
+
+	if err = protobuf.Unmarshal(fdBytes, fdProto); err == nil {
+		fdProtoStore.Store(fdProto.GetPackage(), fdProto)
+
+		for _, descProto := range fdProto.GetMessageType() {
+			fdProtoForTypeStore.Store(fdProto.GetPackage()+"."+descProto.GetName(), fdProto)
+		}
+	}
+
+	return
 }
