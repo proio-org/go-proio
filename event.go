@@ -351,7 +351,7 @@ func addFDFromBytes(fdBytes []byte) (err error) {
 	fdProto := &descriptor.FileDescriptorProto{}
 
 	if err = protobuf.Unmarshal(fdBytes, fdProto); err == nil {
-		fdProtoStore.Store(fdProto.GetPackage(), fdProto)
+		fdProtoStore.Store(fdProto.GetName(), fdProto)
 
 		for _, descProto := range fdProto.GetMessageType() {
 			fdProtoForTypeStore.Store(fdProto.GetPackage()+"."+descProto.GetName(), fdProto)
