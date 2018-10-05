@@ -25,13 +25,14 @@ for proto in $(find proto -iname "*.proto"); do
         echo "option go_package = \"$go_package\";" >> $proto
     fi
     docker_run "protoc \
-        --proto_path=proio/proto=proto \
         --proto_path=proio/model=proto/model \
+        --proto_path=proio/proto=proto \
         --gofast_out=tmp $proto"
 done
 
 # Move code to repo
 docker_run "mv tmp/proio/proto/* go-proio-pb/"
+docker_run "mv tmp/proio/model go-proio-pb/"
 
 # Initialize go module
 cd go-proio-pb
