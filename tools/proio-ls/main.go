@@ -11,6 +11,7 @@ import (
 
 	"github.com/proio-org/go-proio"
 	_ "github.com/proio-org/go-proio-pb/model/eic"
+	_ "github.com/proio-org/go-proio-pb/model/example"
 	_ "github.com/proio-org/go-proio-pb/model/lcio"
 	_ "github.com/proio-org/go-proio-pb/model/mc"
 )
