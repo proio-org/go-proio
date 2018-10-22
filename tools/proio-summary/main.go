@@ -80,8 +80,8 @@ func main() {
 	fmt.Println("Number of events:", nEvents)
 	fmt.Println("Number of FileDescriptorProtos:", nFDs)
 
-	fmt.Println()
 	if *printFileDescriptors {
+		fmt.Println()
 		protos := proio.StoredFileDescriptorProtos()
 		for _, proto := range protos {
 			fmt.Println(protobuf.MarshalTextString(proto))
