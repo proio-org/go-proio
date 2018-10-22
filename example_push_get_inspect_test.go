@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/proio-org/go-proio"
-	"github.com/proio-org/go-proio-pb/model/eic"
+	model "github.com/proio-org/go-proio-pb/model/example"
 )
 
 func Example_pushGetInspect() {
@@ -16,18 +16,15 @@ func Example_pushGetInspect() {
 
 	// Create entries and hold onto their IDs for referencing
 
-	parentPDG := int32(443)
-	parent := &eic.Particle{Pdg: &parentPDG}
+	parent := &model.Particle{Pdg: 443}
 	parentID := eventOut.AddEntry("Particle", parent)
-	eventOut.TagEntry(parentID, "MC", "Primary")
+	eventOut.TagEntry(parentID, "Truth", "Primary")
 
-	child1PDG := int32(11)
-	child1 := &eic.Particle{Pdg: &child1PDG}
-	child2PDG := int32(-11)
-	child2 := &eic.Particle{Pdg: &child2PDG}
+	child1 := &model.Particle{Pdg: 11}
+	child2 := &model.Particle{Pdg: -11}
 	childIDs := eventOut.AddEntries("Particle", child1, child2)
 	for _, id := range childIDs {
-		eventOut.TagEntry(id, "MC", "GenStable")
+		eventOut.TagEntry(id, "Truth", "GenStable")
 	}
 
 	parent.Child = append(parent.Child, childIDs...)
@@ -46,11 +43,11 @@ func Example_pushGetInspect() {
 	mcParts := eventIn.TaggedEntries("Primary")
 	fmt.Print(len(mcParts), " Primary particle(s)...\n")
 	for i, parentID := range mcParts {
-		part := eventIn.GetEntry(parentID).(*eic.Particle)
+		part := eventIn.GetEntry(parentID).(*model.Particle)
 		fmt.Print(i, ". PDG: ", part.GetPdg(), "\n")
 		fmt.Print("  ", len(part.Child), " children...\n")
 		for j, childID := range part.Child {
-			fmt.Print("  ", j, ". PDG: ", eventIn.GetEntry(childID).(*eic.Particle).GetPdg(), "\n")
+			fmt.Print("  ", j, ". PDG: ", eventIn.GetEntry(childID).(*model.Particle).GetPdg(), "\n")
 		}
 	}
 

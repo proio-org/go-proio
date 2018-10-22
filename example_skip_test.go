@@ -5,20 +5,17 @@ import (
 	"fmt"
 
 	"github.com/proio-org/go-proio"
-	"github.com/proio-org/go-proio-pb/model/eic"
+	model "github.com/proio-org/go-proio-pb/model/example"
 )
 
 func Example_skip() {
 	buffer := &bytes.Buffer{}
 	writer := proio.NewWriter(buffer)
 
-	pdg := int32(443)
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 8; i++ {
 		event := proio.NewEvent()
-		charge := float32(i + 1)
-		p := &eic.Particle{
-			Pdg:    &pdg,
-			Charge: &charge,
+		p := &model.Particle{
+			Pdg: int32(11 + i),
 		}
 		event.AddEntry("Particle", p)
 		writer.Push(event)
@@ -28,7 +25,7 @@ func Example_skip() {
 	bytesReader := bytes.NewReader(buffer.Bytes())
 	reader := proio.NewReader(bytesReader)
 
-	reader.Skip(3)
+	reader.Skip(7)
 	event, _ := reader.Next()
 	fmt.Print(event)
 	reader.SeekToStart()
@@ -38,13 +35,11 @@ func Example_skip() {
 	// Output:
 	// ---------- TAG: Particle ----------
 	// ID: 1
-	// Entry type: proio.model.eic.Particle
-	// pdg: 443
-	// charge: 4
+	// Entry type: proio.model.example.Particle
+	// pdg: 18
 	//
 	// ---------- TAG: Particle ----------
 	// ID: 1
-	// Entry type: proio.model.eic.Particle
-	// pdg: 443
-	// charge: 1
+	// Entry type: proio.model.example.Particle
+	// pdg: 11
 }

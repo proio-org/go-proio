@@ -5,20 +5,17 @@ import (
 	"fmt"
 
 	"github.com/proio-org/go-proio"
-	"github.com/proio-org/go-proio-pb/model/eic"
+	model "github.com/proio-org/go-proio-pb/model/example"
 )
 
 func Example_scan() {
 	buffer := &bytes.Buffer{}
 	writer := proio.NewWriter(buffer)
 
-	pdg := int32(443)
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 8; i++ {
 		event := proio.NewEvent()
-		charge := float32(i + 1)
-		p := &eic.Particle{
-			Pdg:    &pdg,
-			Charge: &charge,
+		p := &model.Particle{
+			Pdg: int32(11 + i),
 		}
 		event.AddEntry("Particle", p)
 		writer.Push(event)
@@ -34,31 +31,41 @@ func Example_scan() {
 	// Output:
 	// ---------- TAG: Particle ----------
 	// ID: 1
-	// Entry type: proio.model.eic.Particle
-	// pdg: 443
-	// charge: 1
+	// Entry type: proio.model.example.Particle
+	// pdg: 11
 	//
 	// ---------- TAG: Particle ----------
 	// ID: 1
-	// Entry type: proio.model.eic.Particle
-	// pdg: 443
-	// charge: 2
+	// Entry type: proio.model.example.Particle
+	// pdg: 12
 	//
 	// ---------- TAG: Particle ----------
 	// ID: 1
-	// Entry type: proio.model.eic.Particle
-	// pdg: 443
-	// charge: 3
+	// Entry type: proio.model.example.Particle
+	// pdg: 13
 	//
 	// ---------- TAG: Particle ----------
 	// ID: 1
-	// Entry type: proio.model.eic.Particle
-	// pdg: 443
-	// charge: 4
+	// Entry type: proio.model.example.Particle
+	// pdg: 14
 	//
 	// ---------- TAG: Particle ----------
 	// ID: 1
-	// Entry type: proio.model.eic.Particle
-	// pdg: 443
-	// charge: 5
+	// Entry type: proio.model.example.Particle
+	// pdg: 15
+	//
+	// ---------- TAG: Particle ----------
+	// ID: 1
+	// Entry type: proio.model.example.Particle
+	// pdg: 16
+	//
+	// ---------- TAG: Particle ----------
+	// ID: 1
+	// Entry type: proio.model.example.Particle
+	// pdg: 17
+	//
+	// ---------- TAG: Particle ----------
+	// ID: 1
+	// Entry type: proio.model.example.Particle
+	// pdg: 18
 }

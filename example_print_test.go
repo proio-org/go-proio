@@ -4,24 +4,21 @@ import (
 	"fmt"
 
 	"github.com/proio-org/go-proio"
-	"github.com/proio-org/go-proio-pb/model/eic"
+	model "github.com/proio-org/go-proio-pb/model/example"
 )
 
 func Example_print() {
 	event := proio.NewEvent()
 
-	parentPDG := int32(443)
-	parent := &eic.Particle{Pdg: &parentPDG}
+	parent := &model.Particle{Pdg: 443}
 	parentID := event.AddEntry("Particle", parent)
-	event.TagEntry(parentID, "MC", "Primary")
+	event.TagEntry(parentID, "Truth", "Primary")
 
-	child1PDG := int32(11)
-	child1 := &eic.Particle{Pdg: &child1PDG}
-	child2PDG := int32(-11)
-	child2 := &eic.Particle{Pdg: &child2PDG}
+	child1 := &model.Particle{Pdg: 11}
+	child2 := &model.Particle{Pdg: -11}
 	childIDs := event.AddEntries("Particle", child1, child2)
 	for _, id := range childIDs {
-		event.TagEntry(id, "MC", "GenStable")
+		event.TagEntry(id, "Truth", "GenStable")
 	}
 
 	parent.Child = append(parent.Child, childIDs...)
@@ -31,55 +28,55 @@ func Example_print() {
 	fmt.Print(event)
 
 	// Output:
-	// ---------- TAG: GenStable ----------
-	// ID: 2
-	// Entry type: proio.model.eic.Particle
-	// parent: 1
-	// pdg: 11
-	//
-	// ID: 3
-	// Entry type: proio.model.eic.Particle
-	// parent: 1
-	// pdg: -11
-	//
-	// ---------- TAG: MC ----------
-	// ID: 1
-	// Entry type: proio.model.eic.Particle
-	// child: 2
-	// child: 3
-	// pdg: 443
-	//
-	// ID: 2
-	// Entry type: proio.model.eic.Particle
-	// parent: 1
-	// pdg: 11
-	//
-	// ID: 3
-	// Entry type: proio.model.eic.Particle
-	// parent: 1
-	// pdg: -11
-
-	// ---------- TAG: Particle ----------
-	// ID: 1
-	// Entry type: proio.model.eic.Particle
-	// child: 2
-	// child: 3
-	// pdg: 443
-
-	// ID: 2
-	// Entry type: proio.model.eic.Particle
-	// parent: 1
-	// pdg: 11
-
-	// ID: 3
-	// Entry type: proio.model.eic.Particle
-	// parent: 1
-	// pdg: -11
-
-	// ---------- TAG: Primary ----------
-	// ID: 1
-	// Entry type: proio.model.eic.Particle
-	// child: 2
-	// child: 3
-	// pdg: 443
+    // ---------- TAG: GenStable ----------
+    // ID: 2
+    // Entry type: proio.model.example.Particle
+    // parent: 1
+    // pdg: 11
+    // 
+    // ID: 3
+    // Entry type: proio.model.example.Particle
+    // parent: 1
+    // pdg: -11
+    // 
+    // ---------- TAG: Particle ----------
+    // ID: 1
+    // Entry type: proio.model.example.Particle
+    // child: 2
+    // child: 3
+    // pdg: 443
+    // 
+    // ID: 2
+    // Entry type: proio.model.example.Particle
+    // parent: 1
+    // pdg: 11
+    // 
+    // ID: 3
+    // Entry type: proio.model.example.Particle
+    // parent: 1
+    // pdg: -11
+    // 
+    // ---------- TAG: Primary ----------
+    // ID: 1
+    // Entry type: proio.model.example.Particle
+    // child: 2
+    // child: 3
+    // pdg: 443
+    // 
+    // ---------- TAG: Truth ----------
+    // ID: 1
+    // Entry type: proio.model.example.Particle
+    // child: 2
+    // child: 3
+    // pdg: 443
+    // 
+    // ID: 2
+    // Entry type: proio.model.example.Particle
+    // parent: 1
+    // pdg: 11
+    // 
+    // ID: 3
+    // Entry type: proio.model.example.Particle
+    // parent: 1
+    // pdg: -11
 }
