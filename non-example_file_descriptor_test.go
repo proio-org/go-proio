@@ -22,7 +22,7 @@ func TestWriteFD1(t *testing.T) {
 	writer.Close()
 
 	reader := NewReader(buffer)
-	event, _ = reader.Next()
+	event = reader.Next()
 	reader.Close()
 
 	writer = NewWriter(buffer)

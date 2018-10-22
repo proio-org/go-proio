@@ -21,9 +21,9 @@ func TestPushUpdate1(t *testing.T) {
 	writer.Close()
 
 	reader := NewReader(buffer)
-	event1, _ := reader.Next()
-	event2, _ := reader.Next()
-	event3, _ := reader.Next()
+	event1 := reader.Next()
+	event2 := reader.Next()
+	event3 := reader.Next()
 	if string(event1.Metadata["key1"]) != "value1" {
 		t.Errorf("%v -> %v instead of %v", "key1", event1.Metadata["key1"], "value1")
 	}
@@ -48,9 +48,9 @@ func TestPushUpdate1(t *testing.T) {
 	writer.Close()
 
 	reader = NewReader(buffer)
-	event1, _ = reader.Next()
-	event2, _ = reader.Next()
-	event3, _ = reader.Next()
+	event1 = reader.Next()
+	event2 = reader.Next()
+	event3 = reader.Next()
 	if string(event1.Metadata["key1"]) != "value1" {
 		t.Errorf("%v -> %v instead of %v", "key1", event1.Metadata["key1"], "value1")
 	}

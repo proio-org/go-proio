@@ -18,7 +18,7 @@ import (
 
 var (
 	ignore        = flag.Bool("i", false, "ignore the specified tags instead of isolating them")
-	event         = flag.Int("e", -1, "list specified event, numbered consecutively from the start of the stream starting with 0")
+	event         = flag.Int64("e", -1, "list specified event, numbered consecutively from the start of the stream starting with 0")
 	printMetadata = flag.Bool("m", false, "print metadata as string")
 )
 
@@ -64,12 +64,20 @@ func main() {
 	defer reader.Close()
 
 	singleEvent := false
-	startingEvent := 0
+	startingEvent := uint64(0)
 	if *event >= 0 {
 		singleEvent = true
-		startingEvent = *event
-		if _, err = reader.Skip(uint64(*event)); err != nil {
-			log.Fatal(err)
+		startingEvent = uint64(*event)
+		totalSkipped := uint64(0)
+		for {
+			var nSkipped uint64
+			if nSkipped, err = reader.Skip(startingEvent - totalSkipped); err == io.EOF {
+				log.Fatal(err)
+			}
+			totalSkipped += nSkipped
+			if totalSkipped == startingEvent {
+				break
+			}
 		}
 	}
 
@@ -78,55 +86,52 @@ func main() {
 		argTags[flag.Arg(i)] = true
 	}
 
-	nEventsRead := 0
+	nEventsRead := uint64(0)
 	lastMetadata := make(map[string][]byte)
 
-	for event := range reader.ScanEvents() {
-		if *ignore {
-			for tag := range argTags {
-				event.DeleteTag(tag)
-			}
-		} else if len(argTags) > 0 {
-			for _, tag := range event.Tags() {
-				if !argTags[tag] {
+rescanLoop:
+	for {
+		var event *proio.Event
+		for event = range reader.ScanEvents(1) {
+			if *ignore {
+				for tag := range argTags {
 					event.DeleteTag(tag)
 				}
-			}
-		}
-
-		if !reflect.DeepEqual(event.Metadata, lastMetadata) {
-			fmt.Println("========== META DATA ==========")
-			for key, bytes := range event.Metadata {
-				fmt.Printf("%v: ", key)
-				if *printMetadata {
-					fmt.Println(string(bytes))
-				} else {
-					fmt.Printf("%v bytes\n", len(bytes))
+			} else if len(argTags) > 0 {
+				for _, tag := range event.Tags() {
+					if !argTags[tag] {
+						event.DeleteTag(tag)
+					}
 				}
 			}
-			fmt.Println()
-			lastMetadata = event.Metadata
-		}
 
-		fmt.Println("========== EVENT", nEventsRead+startingEvent, "==========")
-		fmt.Print(event)
-
-		nEventsRead++
-		if singleEvent {
-			reader.StopScan()
-			break
-		}
-	}
-
-errLoop:
-	for {
-		select {
-		case err := <-reader.Err:
-			if err != io.EOF || nEventsRead == 0 {
-				log.Print(err)
+			if !reflect.DeepEqual(event.Metadata, lastMetadata) {
+				fmt.Println("========== META DATA ==========")
+				for key, bytes := range event.Metadata {
+					fmt.Printf("%v: ", key)
+					if *printMetadata {
+						fmt.Println(string(bytes))
+					} else {
+						fmt.Printf("%v bytes\n", len(bytes))
+					}
+				}
+				fmt.Println()
+				lastMetadata = event.Metadata
 			}
-		default:
-			break errLoop
+
+			fmt.Println("========== EVENT", nEventsRead+startingEvent, "==========")
+			fmt.Print(event)
+
+			nEventsRead++
+			if singleEvent {
+				break rescanLoop
+			}
+		}
+
+		if reader.Err == io.EOF {
+			break
+		} else {
+			log.Print(reader.Err)
 		}
 	}
 }

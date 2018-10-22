@@ -26,10 +26,10 @@ func Example_skip() {
 	reader := proio.NewReader(bytesReader)
 
 	reader.Skip(7)
-	event, _ := reader.Next()
+	event := reader.Next()
 	fmt.Print(event)
 	reader.SeekToStart()
-	event, _ = reader.Next()
+	event = reader.Next()
 	fmt.Print(event)
 
 	// Output:

@@ -18,19 +18,17 @@ import (
 // is not inherently thread safe, but it conveniently embeds sync.Mutex so that
 // it can be locked and unlocked.
 type Reader struct {
-	BucketHeader     *proto.BucketHeader
-	streamReader     io.Reader
-	bucket           *bytes.Reader
-	bucketReader     io.Reader
-	bucketEventsRead uint64
-	bucketIndex      uint64
-	metadata         map[string][]byte
+	BucketHeader *proto.BucketHeader
+	Metadata     map[string][]byte
+	Err          error
 
-	Err                   chan error
-	EvtScanBufSize        int
+	streamReader          io.Reader
+	bucket                *bytes.Reader
+	bucketReader          io.Reader
+	bucketEventsRead      uint64
+	bucketIndex           uint64
 	deferredUntilStopScan []func()
-
-	deferredUntilClose []func()
+	deferredUntilClose    []func()
 
 	sync.Mutex
 }
@@ -54,14 +52,11 @@ func Open(filename string) (*Reader, error) {
 // or NewReader should be called to construct a new Reader.
 func NewReader(streamReader io.Reader) *Reader {
 	rdr := &Reader{
-		streamReader:   streamReader,
-		bucket:         &bytes.Reader{},
-		bucketReader:   &bytes.Buffer{},
-		metadata:       make(map[string][]byte),
-		Err:            make(chan error, evtScanBufferSize),
-		EvtScanBufSize: evtScanBufferSize,
+		Metadata:     make(map[string][]byte),
+		streamReader: streamReader,
+		bucket:       &bytes.Reader{},
+		bucketReader: &bytes.Buffer{},
 	}
-	rdr.deferUntilClose(func() { close(rdr.Err) })
 
 	return rdr
 }
@@ -77,18 +72,21 @@ func (rdr *Reader) Close() {
 	rdr.deferredUntilClose = nil
 }
 
-// Next retrieves the next event from the stream.
-func (rdr *Reader) Next() (event *Event, err error) {
+// Next retrieves the next event from the stream.  The Reader's Err member is
+// assigned the error status of this call.
+func (rdr *Reader) Next() *Event {
+	var event *Event
+
 	// use Skip() to ensure that we land on a non-empty bucket
-	if _, err = rdr.Skip(0); err == nil {
+	if _, rdr.Err = rdr.Skip(0); rdr.Err == nil {
 		if rdr.bucket.Size() == 0 {
 			rdr.readBucket()
 		}
 
-		event, err = rdr.readFromBucket()
+		event, rdr.Err = rdr.readFromBucket()
 	}
 
-	return
+	return event
 }
 
 // Skip skips nEvents events.  If the return error is nil, nEvents have been
@@ -120,7 +118,8 @@ func (rdr *Reader) Skip(nEvents uint64) (nSkipped uint64, err error) {
 			}
 		}
 
-		if err = rdr.readHeader(); err != nil {
+		err = rdr.readHeader()
+		if rdr.BucketHeader == nil {
 			return
 		}
 		startIndex = 0
@@ -148,7 +147,7 @@ func (rdr *Reader) SeekToStart() error {
 		}
 	}
 
-	rdr.metadata = make(map[string][]byte)
+	rdr.Metadata = make(map[string][]byte)
 	rdr.bucketIndex = 0
 	if err := rdr.readHeader(); err != nil {
 		return err
@@ -158,27 +157,27 @@ func (rdr *Reader) SeekToStart() error {
 }
 
 // ScanEvents returns a buffered channel of type Event where all of the events
-// in the stream will be pushed.  The channel buffer size is defined by
-// Reader.EvtScanBufSize which defaults to 100.  The goroutine responsible for
-// fetching events will not break until there are no more events,
-// Reader.StopScan() is called, or Reader.Close() is called.  In this scenario,
-// errors are pushed to the Reader.Err channel.
-func (rdr *Reader) ScanEvents() <-chan *Event {
-	events := make(chan *Event, rdr.EvtScanBufSize)
+// in the stream will be pushed.  The channel buffer size is defined by the
+// argument.  The goroutine responsible for fetching events will not break
+// until there are no more events, Reader.StopScan() is called, or
+// Reader.Close() is called.
+func (rdr *Reader) ScanEvents(bufSize int) <-chan *Event {
+	events := make(chan *Event, bufSize)
 	quit := make(chan int)
+
+	rdr.deferUntilStopScan(
+		func() {
+			close(quit)
+		},
+	)
 
 	go func() {
 		defer close(events)
+
 		for {
 			rdr.Lock()
-			event, err := rdr.Next()
+			event := rdr.Next()
 			rdr.Unlock()
-			if err != nil {
-				select {
-				case rdr.Err <- err:
-				default:
-				}
-			}
 			if event == nil {
 				return
 			}
@@ -190,12 +189,6 @@ func (rdr *Reader) ScanEvents() <-chan *Event {
 			}
 		}
 	}()
-
-	rdr.deferUntilStopScan(
-		func() {
-			close(quit)
-		},
-	)
 
 	return events
 }
@@ -211,8 +204,6 @@ func (rdr *Reader) StopScan() {
 func (rdr *Reader) deferUntilClose(thisFunc func()) {
 	rdr.deferredUntilClose = append(rdr.deferredUntilClose, thisFunc)
 }
-
-var evtScanBufferSize int = 100
 
 func (rdr *Reader) deferUntilStopScan(thisFunc func()) {
 	rdr.deferredUntilStopScan = append(rdr.deferredUntilStopScan, thisFunc)
@@ -241,7 +232,7 @@ func (rdr *Reader) readFromBucket() (*Event, error) {
 			}
 
 			event = newEventFromProto(eventProto)
-			for key, bytes := range rdr.metadata {
+			for key, bytes := range rdr.Metadata {
 				event.Metadata[key] = bytes
 			}
 		}
@@ -259,7 +250,8 @@ func (rdr *Reader) readHeader() (err error) {
 	rdr.bucket = &bytes.Reader{}
 
 	// Find and read magic bytes for synchronization
-	_, err = rdr.syncToMagic()
+	var n int
+	n, err = rdr.syncToMagic()
 	if err != nil {
 		return
 	}
@@ -283,7 +275,7 @@ func (rdr *Reader) readHeader() (err error) {
 
 	// Set metadata for future events
 	for key, bytes := range rdr.BucketHeader.Metadata {
-		rdr.metadata[key] = bytes
+		rdr.Metadata[key] = bytes
 	}
 
 	// Add descriptors to pool
@@ -293,6 +285,9 @@ func (rdr *Reader) readHeader() (err error) {
 		}
 	}
 
+	if n != len(magicBytes) {
+		return errors.New("stream resynchronized")
+	}
 	return
 }
 
