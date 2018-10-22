@@ -208,6 +208,7 @@ func eventPushGet1(comp Compression, t *testing.T) {
 	buffer := &bytes.Buffer{}
 	writer := NewWriter(buffer)
 	writer.SetCompression(comp)
+	writer.CompLevel = 1
 
 	var eventsOut [2]*Event
 
