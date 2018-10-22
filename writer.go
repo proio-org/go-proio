@@ -29,6 +29,9 @@ const (
 // is not inherently thread safe, but it conveniently embeds sync.Mutex so that
 // it can be locked and unlocked.
 type Writer struct {
+	BucketDumpThres int
+	CompLevel       int
+
 	streamWriter io.Writer
 	bucket       *bytes.Buffer
 	bucketHeader proto.BucketHeader
@@ -81,10 +84,12 @@ func (wrt *Writer) Close() error {
 // NewWriter or Create must be used to construct a Writer.
 func NewWriter(streamWriter io.Writer) *Writer {
 	writer := &Writer{
-		streamWriter: streamWriter,
-		bucket:       &bytes.Buffer{},
-		metadata:     make(map[string][]byte),
-		writtenFDs:   make(map[protobuf.Message]bool),
+		BucketDumpThres: 0x1000000,
+		CompLevel:       -1,
+		streamWriter:    streamWriter,
+		bucket:          &bytes.Buffer{},
+		metadata:        make(map[string][]byte),
+		writtenFDs:      make(map[protobuf.Message]bool),
 	}
 
 	writer.SetCompression(GZIP)
@@ -175,7 +180,7 @@ func (wrt *Writer) Push(event *Event) error {
 
 	wrt.bucketHeader.NEvents++
 
-	if wrt.bucket.Len() > bucketDumpSize {
+	if wrt.bucket.Len() > wrt.BucketDumpThres {
 		if err := wrt.writeBucket(); err != nil {
 			return err
 		}
@@ -194,8 +199,6 @@ func (wrt *Writer) PushMetadata(name string, data []byte) error {
 	wrt.bucketHeader.Metadata[name] = data
 	return nil
 }
-
-const bucketDumpSize = 0x1000000
 
 var magicBytes = [...]byte{
 	byte(0xe1),
@@ -216,24 +219,39 @@ var magicBytes = [...]byte{
 	byte(0x00),
 }
 
-func (wrt *Writer) writeBucket() error {
+func (wrt *Writer) writeBucket() (err error) {
 	bucketBytes := wrt.bucket.Bytes()
 	switch wrt.bucketHeader.Compression {
 	case proto.BucketHeader_GZIP:
 		buffer := &bytes.Buffer{}
-		gzipWriter := gzip.NewWriter(buffer)
+		var gzipWriter *gzip.Writer
+		if wrt.CompLevel >= 0 {
+			if gzipWriter, err = gzip.NewWriterLevel(buffer, wrt.CompLevel); err != nil {
+				return
+			}
+		} else {
+			gzipWriter = gzip.NewWriter(buffer)
+		}
 		gzipWriter.Write(bucketBytes)
 		gzipWriter.Close()
 		bucketBytes = buffer.Bytes()
 	case proto.BucketHeader_LZ4:
 		buffer := &bytes.Buffer{}
 		lz4Writer := lz4.NewWriter(buffer)
+		if wrt.CompLevel >= 0 {
+			lz4Writer.Header.CompressionLevel = wrt.CompLevel
+		}
 		lz4Writer.Write(bucketBytes)
 		lz4Writer.Close()
 		bucketBytes = buffer.Bytes()
 	case proto.BucketHeader_LZMA:
 		buffer := &bytes.Buffer{}
-		lzmaWriter := lzma.NewWriter(buffer)
+		var lzmaWriter io.WriteCloser
+		if wrt.CompLevel >= 0 {
+			lzmaWriter = lzma.NewWriterLevel(buffer, wrt.CompLevel)
+		} else {
+			lzmaWriter = lzma.NewWriter(buffer)
+		}
 		lzmaWriter.Write(bucketBytes)
 		lzmaWriter.Close()
 		bucketBytes = buffer.Bytes()
