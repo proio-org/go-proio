@@ -2,7 +2,6 @@ package proio
 
 import (
 	"bytes"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -100,9 +99,9 @@ func TestCompSwitch(t *testing.T) {
 	reader := NewReader(buffer)
 
 	for i := 0; i < 7; i++ {
-		event, err := reader.Next()
-		if err != nil {
-			t.Error(err)
+		event := reader.Next()
+		if reader.Err != nil {
+			t.Error(reader.Err)
 		}
 		if event == nil {
 			t.Errorf("Event %v failed to Get", i)
@@ -125,6 +124,10 @@ func TestUncompPushGet3(t *testing.T) {
 	eventPushGet3(UNCOMPRESSED, t)
 }
 
+func TestUncompPushGet4(t *testing.T) {
+	eventPushGet4(UNCOMPRESSED, t)
+}
+
 func TestUncompPushSkipGet1(t *testing.T) {
 	eventPushSkipGet1(UNCOMPRESSED, t)
 }
@@ -143,6 +146,10 @@ func TestLZ4PushGet2(t *testing.T) {
 
 func TestLZ4PushGet3(t *testing.T) {
 	eventPushGet3(LZ4, t)
+}
+
+func TestLZ4PushGet4(t *testing.T) {
+	eventPushGet4(LZ4, t)
 }
 
 func TestLZ4PushSkipGet1(t *testing.T) {
@@ -165,6 +172,10 @@ func TestGZIPPushGet3(t *testing.T) {
 	eventPushGet3(GZIP, t)
 }
 
+func TestGZIPPushGet4(t *testing.T) {
+	eventPushGet4(GZIP, t)
+}
+
 func TestGZIPPushSkipGet1(t *testing.T) {
 	eventPushSkipGet1(GZIP, t)
 }
@@ -181,8 +192,8 @@ func TestLZMAPushGet2(t *testing.T) {
 	eventPushGet2(LZMA, t)
 }
 
-func TestLZMAPushGet3(t *testing.T) {
-	eventPushGet3(LZMA, t)
+func TestLZMAPushGet4(t *testing.T) {
+	eventPushGet4(LZMA, t)
 }
 
 func TestLZMAPushSkipGet1(t *testing.T) {
@@ -228,9 +239,9 @@ func eventPushGet1(comp Compression, t *testing.T) {
 	defer reader.Close()
 
 	for i := 0; i < 2; i++ {
-		event, err := reader.Next()
-		if err != nil {
-			t.Error(err)
+		event := reader.Next()
+		if reader.Err != nil {
+			t.Error(reader.Err)
 		}
 		if event == nil {
 			t.Errorf("Event %v failed to Get", i)
@@ -277,9 +288,9 @@ func eventPushGet2(comp Compression, t *testing.T) {
 	defer reader.Close()
 
 	for i := 0; i < 2; i++ {
-		event, err := reader.Next()
-		if err != nil {
-			t.Error(err)
+		event := reader.Next()
+		if reader.Err != nil {
+			t.Error(reader.Err)
 		}
 		if event == nil {
 			t.Errorf("Event %v failed to Get", i)
@@ -307,10 +318,9 @@ func eventPushGet3(comp Compression, t *testing.T) {
 	writer.Close()
 
 	reader := NewReader(buffer)
-	var err error
-	event, err = reader.Next()
-	if err != nil {
-		t.Error(err)
+	event = reader.Next()
+	if reader.Err != nil {
+		t.Error(reader.Err)
 	}
 	reader.Close()
 
@@ -329,9 +339,9 @@ func eventPushGet3(comp Compression, t *testing.T) {
 	defer reader.Close()
 
 	for i := 0; i < len(eventsOut); i++ {
-		event, err = reader.Next()
-		if err != nil {
-			t.Error(err)
+		event = reader.Next()
+		if reader.Err != nil {
+			t.Error(reader.Err)
 		}
 		if event == nil {
 			t.Errorf("Event %v failed to Get", i)
@@ -339,6 +349,34 @@ func eventPushGet3(comp Compression, t *testing.T) {
 		if event.String() != eventsOut[i].String() {
 			t.Errorf("Event %v corrupted", i)
 		}
+	}
+}
+
+func eventPushGet4(comp Compression, t *testing.T) {
+	buffer := &bytes.Buffer{}
+	buffer.Write([]byte("asdf"))
+	writer := NewWriter(buffer)
+	writer.SetCompression(comp)
+
+	writer.Push(NewEvent())
+	writer.Close()
+
+	reader := NewReader(buffer)
+	defer reader.Close()
+
+	event := reader.Next()
+	if reader.Err == nil {
+		t.Errorf("unreported resync error")
+	}
+
+	event = reader.Next()
+	if event == nil {
+		t.Errorf("failure to resync")
+	}
+
+	event = reader.Next()
+	if event != nil {
+		t.Errorf("failure to resync")
 	}
 }
 
@@ -377,9 +415,9 @@ func eventPushSkipGet1(comp Compression, t *testing.T) {
 	defer reader.Close()
 	reader.Skip(1)
 
-	event, err := reader.Next()
-	if err != nil {
-		t.Error(err)
+	event = reader.Next()
+	if reader.Err != nil {
+		t.Error(reader.Err)
 	}
 	if event == nil {
 		t.Errorf("Event %v failed to Get", 1)
@@ -430,9 +468,9 @@ func eventPushSkipGet2(comp Compression, t *testing.T) {
 	defer reader.Close()
 	reader.Skip(1)
 
-	event, err := reader.Next()
-	if err != nil {
-		t.Error(err)
+	event = reader.Next()
+	if reader.Err != nil {
+		t.Error(reader.Err)
 	}
 	if event == nil {
 		t.Errorf("Event %v failed to Get", 1)
@@ -501,7 +539,7 @@ func writeIterateFile(comp Compression, t *testing.T) {
 	reader.Next()
 	reader.Skip(2)
 	eventCount += 4
-	for range reader.ScanEvents() {
+	for range reader.ScanEvents(100) {
 		eventCount++
 	}
 	reader.Close()
@@ -547,9 +585,9 @@ func TestRefDeref1(t *testing.T) {
 
 	reader := NewReader(buffer)
 
-	eventIn, err := reader.Next()
-	if err != nil {
-		t.Error("Error reading back event: ", err)
+	eventIn := reader.Next()
+	if reader.Err != nil {
+		t.Error("Error reading back event: ", reader.Err)
 	}
 
 	MCParticles := eventIn.TaggedEntries("MCParticles")
@@ -632,7 +670,7 @@ func TestScan1(t *testing.T) {
 		&prolcio.SimTrackerHit{},
 		&prolcio.SimTrackerHit{},
 	)
-	for i := 0; i < evtScanBufferSize*2; i++ {
+	for i := 0; i < 200; i++ {
 		writer.Push(eventOut)
 	}
 
@@ -655,7 +693,7 @@ func TestScan1(t *testing.T) {
 		done <- 1
 	}
 
-	c := reader.ScanEvents()
+	c := reader.ScanEvents(100)
 	go scanner(c)
 	go scanner(c)
 
@@ -675,20 +713,8 @@ waitLoop:
 		}
 	}
 
-	if totEvtsRead != evtScanBufferSize*2 {
-		t.Errorf("%v events read instead of %v", totEvtsRead, evtScanBufferSize*2)
-	}
-
-errLoop:
-	for {
-		select {
-		case err := <-reader.Err:
-			if err != io.EOF {
-				t.Error(err)
-			}
-		default:
-			break errLoop
-		}
+	if totEvtsRead != 200 {
+		t.Errorf("%v events read instead of %v", totEvtsRead, 200)
 	}
 }
 
@@ -707,7 +733,7 @@ func TestScan2(t *testing.T) {
 		&prolcio.SimTrackerHit{},
 		&prolcio.SimTrackerHit{},
 	)
-	for i := 0; i < evtScanBufferSize*2; i++ {
+	for i := 0; i < 200; i++ {
 		writer.Push(eventOut)
 		if i%10 == 9 {
 			writer.Flush()
@@ -733,7 +759,7 @@ func TestScan2(t *testing.T) {
 		done <- 1
 	}
 
-	c := reader.ScanEvents()
+	c := reader.ScanEvents(100)
 	go scanner(c)
 	go scanner(c)
 
@@ -753,20 +779,8 @@ waitLoop:
 		}
 	}
 
-	if totEvtsRead != evtScanBufferSize*2 {
-		t.Errorf("%v events read instead of %v", totEvtsRead, evtScanBufferSize*2)
-	}
-
-errLoop:
-	for {
-		select {
-		case err := <-reader.Err:
-			if err != io.EOF {
-				t.Error(err)
-			}
-		default:
-			break errLoop
-		}
+	if totEvtsRead != 200 {
+		t.Errorf("%v events read instead of %v", totEvtsRead, 200)
 	}
 }
 
@@ -785,7 +799,7 @@ func TestScan3(t *testing.T) {
 		&prolcio.SimTrackerHit{},
 		&prolcio.SimTrackerHit{},
 	)
-	for i := 0; i < evtScanBufferSize*2; i++ {
+	for i := 0; i < 200; i++ {
 		writer.Push(eventOut)
 	}
 
@@ -813,7 +827,7 @@ func TestScan3(t *testing.T) {
 		done <- 1
 	}
 
-	c := reader.ScanEvents()
+	c := reader.ScanEvents(100)
 	go scanner(c)
 	go scanner(c)
 
@@ -833,20 +847,8 @@ waitLoop:
 		}
 	}
 
-	if totEvtsRead != evtScanBufferSize*2 {
-		t.Errorf("%v events read instead of %v", totEvtsRead, evtScanBufferSize*2)
-	}
-
-errLoop:
-	for {
-		select {
-		case err := <-reader.Err:
-			if err != io.EOF {
-				t.Error(err)
-			}
-		default:
-			break errLoop
-		}
+	if totEvtsRead != 200 {
+		t.Errorf("%v events read instead of %v", totEvtsRead, 200)
 	}
 }
 
@@ -865,7 +867,7 @@ func TestScan4(t *testing.T) {
 		&prolcio.SimTrackerHit{},
 		&prolcio.SimTrackerHit{},
 	)
-	for i := 0; i < evtScanBufferSize*2; i++ {
+	for i := 0; i < 200; i++ {
 		writer.Push(eventOut)
 		if i%10 == 9 {
 			writer.Flush()
@@ -896,7 +898,7 @@ func TestScan4(t *testing.T) {
 		done <- 1
 	}
 
-	c := reader.ScanEvents()
+	c := reader.ScanEvents(100)
 	go scanner(c)
 	go scanner(c)
 
@@ -916,20 +918,8 @@ waitLoop:
 		}
 	}
 
-	if totEvtsRead != evtScanBufferSize*2 {
-		t.Errorf("%v events read instead of %v", totEvtsRead, evtScanBufferSize*2)
-	}
-
-errLoop:
-	for {
-		select {
-		case err := <-reader.Err:
-			if err != io.EOF {
-				t.Error(err)
-			}
-		default:
-			break errLoop
-		}
+	if totEvtsRead != 200 {
+		t.Errorf("%v events read instead of %v", totEvtsRead, 200)
 	}
 }
 
@@ -948,7 +938,7 @@ func TestScan5(t *testing.T) {
 		&prolcio.SimTrackerHit{},
 		&prolcio.SimTrackerHit{},
 	)
-	for i := 0; i < evtScanBufferSize*3; i++ {
+	for i := 0; i < 300; i++ {
 		writer.Push(eventOut)
 	}
 
@@ -971,7 +961,7 @@ func TestScan5(t *testing.T) {
 		done <- 1
 	}
 
-	c := reader.ScanEvents()
+	c := reader.ScanEvents(100)
 	go scanner(c)
 	go scanner(c)
 
@@ -994,19 +984,7 @@ waitLoop:
 		}
 	}
 
-	if totEvtsRead >= evtScanBufferSize*3 {
+	if totEvtsRead >= 300 {
 		t.Errorf("Failed to stop scans")
-	}
-
-errLoop:
-	for {
-		select {
-		case err := <-reader.Err:
-			if err != io.EOF {
-				t.Error(err)
-			}
-		default:
-			break errLoop
-		}
 	}
 }

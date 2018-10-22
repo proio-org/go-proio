@@ -45,7 +45,7 @@ func doWrite(writer *Writer, b *testing.B, n int) {
 
 func doRead(reader *Reader, b *testing.B) {
 	b.ResetTimer()
-	for event := range reader.ScanEvents() {
+	for event := range reader.ScanEvents(100) {
 		trackHitID := event.TaggedEntries("SimTrackHits")[0]
 		_ = event.GetEntry(trackHitID)
 	}

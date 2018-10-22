@@ -17,6 +17,7 @@ var (
 	keep          = flag.Bool("k", false, "keep only entries with the specified tags, rather than stripping them away")
 	stripMetadata = flag.Bool("m", false, "strip all metadata")
 	compLevel     = flag.Int("c", 2, "output compression level: 0 for uncompressed, 1 for LZ4 compression, 2 for GZIP compression, 3 for LZMA compression")
+	readBufSize   = flag.Int("b", 10, "read buffer size in number of events")
 )
 
 func printUsage() {
@@ -87,59 +88,56 @@ func main() {
 
 	nEventsRead := 0
 
-	for event := range reader.ScanEvents() {
-		if *stripMetadata {
-			event.Metadata = nil
-		}
-
-		if *keep {
-			keepTagIDs := make(map[uint64]bool)
-			for _, keepTag := range argTags {
-				for _, entryID := range event.TaggedEntries(keepTag) {
-					keepTagIDs[entryID] = true
-				}
-			}
-			for _, entryID := range event.AllEntries() {
-				if !keepTagIDs[entryID] {
-					event.RemoveEntry(entryID)
-				}
-			}
-		} else {
-			removeTagIDs := make(map[uint64]int)
-			for _, removeTag := range argTags {
-				for _, entryID := range event.TaggedEntries(removeTag) {
-					removeTagIDs[entryID]++
-				}
-			}
-			for entryID, count := range removeTagIDs {
-				if !*intersection || count == len(argTags) {
-					event.RemoveEntry(entryID)
-				}
-			}
-		}
-
-		for _, tag := range event.Tags() {
-			if len(event.TaggedEntries(tag)) == 0 {
-				event.DeleteTag(tag)
-			}
-		}
-
-		if err := writer.Push(event); err != nil {
-			log.Fatal(err)
-		}
-
-		nEventsRead++
-	}
-
-errLoop:
 	for {
-		select {
-		case err := <-reader.Err:
-			if err != io.EOF || nEventsRead == 0 {
-				log.Print(err)
+		var event *proio.Event
+		for event = range reader.ScanEvents(*readBufSize) {
+			if *stripMetadata {
+				event.Metadata = nil
 			}
-		default:
-			break errLoop
+
+			if *keep {
+				keepTagIDs := make(map[uint64]bool)
+				for _, keepTag := range argTags {
+					for _, entryID := range event.TaggedEntries(keepTag) {
+						keepTagIDs[entryID] = true
+					}
+				}
+				for _, entryID := range event.AllEntries() {
+					if !keepTagIDs[entryID] {
+						event.RemoveEntry(entryID)
+					}
+				}
+			} else {
+				removeTagIDs := make(map[uint64]int)
+				for _, removeTag := range argTags {
+					for _, entryID := range event.TaggedEntries(removeTag) {
+						removeTagIDs[entryID]++
+					}
+				}
+				for entryID, count := range removeTagIDs {
+					if !*intersection || count == len(argTags) {
+						event.RemoveEntry(entryID)
+					}
+				}
+			}
+
+			for _, tag := range event.Tags() {
+				if len(event.TaggedEntries(tag)) == 0 {
+					event.DeleteTag(tag)
+				}
+			}
+
+			if err := writer.Push(event); err != nil {
+				log.Fatal(err)
+			}
+
+			nEventsRead++
+		}
+
+		if reader.Err == io.EOF {
+			break
+		} else {
+			log.Print(reader.Err)
 		}
 	}
 }

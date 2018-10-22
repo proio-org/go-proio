@@ -38,7 +38,7 @@ func Example_pushGetInspect() {
 	// Event created and serialized, now to deserialize and inspect
 
 	reader := proio.NewReader(buffer)
-	eventIn, _ := reader.Next()
+	eventIn := reader.Next()
 
 	mcParts := eventIn.TaggedEntries("Primary")
 	fmt.Print(len(mcParts), " Primary particle(s)...\n")

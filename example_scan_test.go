@@ -24,7 +24,7 @@ func Example_scan() {
 
 	reader := proio.NewReader(buffer)
 
-	for event := range reader.ScanEvents() {
+	for event := range reader.ScanEvents(10) {
 		fmt.Print(event)
 	}
 
