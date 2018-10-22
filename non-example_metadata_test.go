@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestPushUpdate1(t *testing.T) {
+func TestMetaPushUpdate1(t *testing.T) {
 	buffer := &bytes.Buffer{}
 
 	writer := NewWriter(buffer)

@@ -7,7 +7,6 @@ import (
 	"errors"
 	"io"
 	"os"
-	"reflect"
 	"sync"
 
 	protobuf "github.com/golang/protobuf/proto"
@@ -125,7 +124,7 @@ type getDependencyer interface {
 // memory are not reflected in the output stream.
 func (wrt *Writer) Push(event *Event) error {
 	for key, value := range event.Metadata {
-		if !reflect.DeepEqual(wrt.metadata[key], value) {
+		if !bytes.Equal(wrt.metadata[key], value) {
 			wrt.PushMetadata(key, value)
 			wrt.metadata[key] = value
 		}
