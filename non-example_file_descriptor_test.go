@@ -14,6 +14,7 @@ func TestWriteFD1(t *testing.T) {
 	writer := NewWriter(buffer)
 	event := NewEvent()
 	event.AddEntry("test", &eic.Particle{})
+	event.AddEntry("test", &eic.Particle{})
 	event.AddEntry("test", &mc.Particle{})
 	writer.Push(event)
 	if len(writer.writtenFDs) != 2 {
@@ -26,6 +27,7 @@ func TestWriteFD1(t *testing.T) {
 	reader.Close()
 
 	writer = NewWriter(buffer)
+	event.AddEntry("test", &eic.Particle{})
 	event.AddEntry("test", &eic.Particle{})
 	event.AddEntry("test", &mc.Particle{})
 	writer.Push(event)
