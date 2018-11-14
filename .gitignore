@@ -3,6 +3,3 @@
 
 # vim swap files
 *.swp
-
-# For now at least, ignore go.sum files
-go.sum
