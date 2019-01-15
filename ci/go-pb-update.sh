@@ -1,8 +1,9 @@
 #!/bin/bash
 
-git clone https://git@$GO_PB_REPO_REF go-proio-pb
-
-mkdir tmp
+pbdir=$PWD/go-proio-pb
+git clone https://git@$GO_PB_REPO_REF $pbdir
+rm -rf $pbdir/*
+tmpdir=$(mktemp -d)
 
 GOFAST=$(which protoc-gen-gofast)
 docker_run () {
@@ -15,7 +16,6 @@ docker_run () {
 }
 
 # Generate protobuf message code
-rm -rf go-proio-pb/*
 for proto in $(find proto -iname "*.proto"); do
     if [ -z "$(grep -i go_package $proto)" ]; then
         go_package=$(basename ${proto%.proto})
@@ -27,16 +27,17 @@ for proto in $(find proto -iname "*.proto"); do
     docker_run "protoc \
         --proto_path=proio/model=proto/model \
         --proto_path=proio/proto=proto \
-        --gofast_out=tmp $proto"
+        --gofast_out=$tmpdir $proto"
 done
 
 # Move code to repo
-docker_run "mv tmp/proio/proto/* go-proio-pb/"
-docker_run "mv tmp/proio/model go-proio-pb/"
+docker_run "mv $tmpdir/proio/proto/* $pbdir/"
+docker_run "mv $tmpdir/proio/model $pbdir/"
+rm -rf $tmpdir
 
 # Initialize go module
-cd go-proio-pb
-GO111MODULE=on go mod init github.com/proio-org/go-proio-pb
+cd $pbdir
+GO111MODULE=on go mod init $GO_PB_REPO_REF
 GO111MODULE=on go get -u ./...
 
 # Create and push commit
