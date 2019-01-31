@@ -8,6 +8,7 @@ tmpdir=$(mktemp -d)
 GOFAST=$(which protoc-gen-gofast)
 docker_run () {
     docker run \
+        -v $tmpdir:$tmpdir \
         -v $TRAVIS_BUILD_DIR:$TRAVIS_BUILD_DIR \
         -v $GOFAST:$GOFAST \
         -w $PWD \
