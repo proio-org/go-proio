@@ -3,10 +3,12 @@ package proio
 import (
 	"bytes"
 	"errors"
+	"reflect"
 	"testing"
 
 	protobuf "github.com/golang/protobuf/proto"
 	"github.com/proio-org/go-proio-pb/model/eic"
+	"github.com/proio-org/go-proio-pb/model/example"
 	prolcio "github.com/proio-org/go-proio-pb/model/lcio"
 )
 
@@ -296,5 +298,37 @@ failure to unmarshal entry 1 with type halfSelfSerializingMsg2
 `
 	if event.String() != eventString {
 		t.Errorf("Event string is \n%v\ninstead of\n%v", event.String(), eventString)
+	}
+}
+
+func TestCopyEvent(t *testing.T) {
+	event := NewEvent()
+	event.AddEntry(
+		"Test",
+		&example.Particle{},
+	)
+	event.Metadata["md1"] = []byte{0x0}
+
+	newEvent := CopyEvent(event)
+
+	if event.String() != newEvent.String() {
+		t.Errorf("Copied event does not have equivalent data")
+	}
+	if !reflect.DeepEqual(event.Metadata, newEvent.Metadata) {
+		t.Errorf("Copied event does not have equivalent metadata")
+	}
+
+	event.AddEntry(
+		"Test",
+		&example.Particle{},
+	)
+	event.FlushCache()
+	event.Metadata["md1"] = []byte{0x1}
+
+	if event.String() == newEvent.String() {
+		t.Errorf("New event data are not independent")
+	}
+	if reflect.DeepEqual(event.Metadata, newEvent.Metadata) {
+		t.Errorf("New event metadata are not independent")
 	}
 }

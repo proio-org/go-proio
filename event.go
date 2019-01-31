@@ -38,6 +38,16 @@ func NewEvent() *Event {
 	return newEventFromProto(&proto.Event{})
 }
 
+// CopyEvent copies an Event.
+func CopyEvent(event *Event) *Event {
+	event.FlushCache()
+	newEvent := newEventFromProto(protobuf.Clone(event.proto).(*proto.Event))
+	for key, bytes := range event.Metadata {
+		newEvent.Metadata[key] = bytes
+	}
+	return newEvent
+}
+
 // AddEntry takes a single primary tag for an entry and an entry protobuf
 // message, and returns a new ID number for the entry.  This ID number can be
 // used to persistently reference the entry.  For example, pass the ID TagEntry
