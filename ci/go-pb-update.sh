@@ -38,7 +38,7 @@ rm -rf $tmpdir
 
 # Initialize go module
 cd $pbdir
-GO111MODULE=on go mod init $GO_PB_REPO_REF
+GO111MODULE=on go mod init ${GO_PB_REPO_REF%.git}
 GO111MODULE=on go get -u ./...
 
 # Create and push commit
