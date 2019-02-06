@@ -76,11 +76,6 @@ github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UV
 github.com/stretchrcom/testify v1.2.2/go.mod h1:zUrQijuLcfRPyrWG6SBFjct9CuJZz2Ybtack4DGF2Jo=
 github.com/ulikunitz/xz v0.5.4/go.mod h1:2bypXElzHzzJZwzH67Y6wb67pO62Rzfn7BSiF4ABRW8=
 github.com/ulikunitz/xz v0.5.5/go.mod h1:2bypXElzHzzJZwzH67Y6wb67pO62Rzfn7BSiF4ABRW8=
-go-hep.org/x/exp v0.0.0-20180802154217-6d993ac81a11/go.mod h1:laR3d9r+2P9cHBEfp0Pa1m/Fe4Xc6nAsk8Pxk5+BEr4=
-go-hep.org/x/hep v0.14.0 h1:Rwaz2FRAsq9G7ol3fk719ryRNWYpkFOVnOykqDtHrh0=
-go-hep.org/x/hep v0.14.0/go.mod h1:w6Kf562FIV9x8Qw+GYICq6d47obkLyEdzsdQkbYyETY=
-go-hep.org/x/hep v0.17.1 h1:oyyejIhV4PnKKK4671N6u3nmuw218rgv+3cC6VoK+0c=
-go-hep.org/x/hep v0.17.1/go.mod h1:XEeqm/ePmKsNOH6L9UU+qxFXMuOYAD70cdiBJCvxSqc=
 golang.org/x/crypto v0.0.0-20180723164146-c126467f60eb/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
 golang.org/x/crypto v0.0.0-20190103213133-ff983b9c42bc/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
 golang.org/x/exp v0.0.0-20180321215751-8460e604b9de/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
