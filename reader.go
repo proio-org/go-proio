@@ -44,7 +44,7 @@ func Open(filename string) (*Reader, error) {
 	}
 
 	reader := NewReader(file)
-	reader.deferUntilClose(func() { file.Close() })
+	reader.DeferUntilClose(func() { file.Close() })
 	return reader, nil
 }
 
@@ -201,7 +201,7 @@ func (rdr *Reader) StopScan() {
 	rdr.deferredUntilStopScan = nil
 }
 
-func (rdr *Reader) deferUntilClose(thisFunc func()) {
+func (rdr *Reader) DeferUntilClose(thisFunc func()) {
 	rdr.deferredUntilClose = append(rdr.deferredUntilClose, thisFunc)
 }
 
