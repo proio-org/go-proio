@@ -52,7 +52,7 @@ func Create(filename string) (*Writer, error) {
 	}
 
 	writer := NewWriter(file)
-	writer.deferUntilClose(file.Close)
+	writer.DeferUntilClose(file.Close)
 
 	return writer, nil
 }
@@ -92,7 +92,7 @@ func NewWriter(streamWriter io.Writer) *Writer {
 	}
 
 	writer.SetCompression(GZIP)
-	writer.deferUntilClose(writer.Flush)
+	writer.DeferUntilClose(writer.Flush)
 
 	return writer
 }
@@ -298,6 +298,6 @@ func writeBytes(wrt io.Writer, buf []byte) error {
 	return nil
 }
 
-func (wrt *Writer) deferUntilClose(thisFunc func() error) {
+func (wrt *Writer) DeferUntilClose(thisFunc func() error) {
 	wrt.deferredUntilClose = append(wrt.deferredUntilClose, thisFunc)
 }
