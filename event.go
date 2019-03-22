@@ -213,7 +213,7 @@ func (evt *Event) DeleteTag(tag string) {
 
 // FlushCache forces all event entries to be serialized, among other things.
 // This is useful for putting the main serialization load into parallel
-// routines before aggregating the events into an output stream
+// routines before aggregating the events into an output stream.
 func (evt *Event) FlushCache() {
 	for id, entry := range evt.entryCache {
 		selfSerializingEntry, ok := entry.(protobuf.Marshaler)
@@ -224,6 +224,22 @@ func (evt *Event) FlushCache() {
 			bytes, _ = protobuf.Marshal(entry)
 		}
 		evt.proto.Entry[id].Payload = bytes
+	}
+	evt.entryCache = make(map[uint64]protobuf.Message)
+
+	evt.tagCleanup()
+}
+
+// FlushCacheCustom performs the same function as FlushCache, except that it
+// takes an argument of a function can be passed that takes care of the
+// marshalling.  This can be useful for doing tricks to serialize more quickly
+// in particular scenarios.  Set the argument to nil for default behavior.
+func (evt *Event) FlushCacheCustom(marshalFunc func(protobuf.Message) ([]byte, error)) {
+	if marshalFunc == nil {
+		evt.FlushCache()
+	}
+	for id, entry := range evt.entryCache {
+		evt.proto.Entry[id].Payload, _ = marshalFunc(entry)
 	}
 	evt.entryCache = make(map[uint64]protobuf.Message)
 
