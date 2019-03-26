@@ -127,7 +127,7 @@ func main() {
 				}
 			}
 
-			if err := writer.Push(event); err != nil && err != io.EOF {
+			if err := writer.Push(event); err != nil {
 				log.Fatal(err)
 			}
 
