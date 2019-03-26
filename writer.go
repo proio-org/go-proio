@@ -291,7 +291,7 @@ func writeBytes(wrt io.Writer, buf []byte) error {
 	for tot < len(buf) {
 		n, err := wrt.Write(buf[tot:])
 		tot += n
-		if err != nil && tot != len(buf) {
+		if err != nil {
 			return err
 		}
 	}
