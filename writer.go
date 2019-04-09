@@ -265,16 +265,13 @@ func (wrt *Writer) writeBucket() (err error) {
 	headerSizeBuf := make([]byte, 4)
 	binary.LittleEndian.PutUint32(headerSizeBuf, uint32(len(headerBuf)))
 
-	if err := writeBytes(wrt.streamWriter, magicBytes[:]); err != nil {
-		return err
-	}
-	if err := writeBytes(wrt.streamWriter, headerSizeBuf); err != nil {
-		return err
-	}
-	if err := writeBytes(wrt.streamWriter, headerBuf); err != nil {
-		return err
-	}
-	if err := writeBytes(wrt.streamWriter, bucketBytes); err != nil {
+	buf := make([]byte, len(magicBytes)+len(headerSizeBuf)+len(headerBuf)+len(bucketBytes))[:0]
+	buf = append(buf, magicBytes[:]...)
+	buf = append(buf, headerSizeBuf...)
+	buf = append(buf, headerBuf...)
+	buf = append(buf, bucketBytes...)
+
+	if err := writeBytes(wrt.streamWriter, buf); err != nil {
 		return err
 	}
 
