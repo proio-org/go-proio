@@ -23,11 +23,11 @@ matrix:
 
         - language: go
           stage: build
-          go: 1.9.x
-        - language: go
           go: 1.10.x
         - language: go
           go: 1.11.x
+        - language: go
+          go: 1.12.x
           install:
               - go get golang.org/x/tools/cmd/cover
               - go get -t ./...
