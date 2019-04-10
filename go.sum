@@ -59,6 +59,8 @@ github.com/golang/mock v1.1.1/go.mod h1:oTYuIxOrZwtPieC+H1uAHpcLFnEyAGVDL/k47Jfb
 github.com/golang/mock v1.2.0/go.mod h1:oTYuIxOrZwtPieC+H1uAHpcLFnEyAGVDL/k47Jfbm0A=
 github.com/golang/protobuf v1.2.0 h1:P3YflyNX/ehuJFLhxviNdFxQPkGK5cDcApsge1SqnvM=
 github.com/golang/protobuf v1.2.0/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
+github.com/golang/protobuf v1.3.1 h1:YF8+flBXS5eO826T4nzqPrxfhQThhXl0YzfuUPu4SBg=
+github.com/golang/protobuf v1.3.1/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
 github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db/go.mod h1:/XxbfmMg8lxefKM7IXC3fBNl/7bRcc72aCRzEWrmP2Q=
 github.com/golang/snappy v0.0.0-20190218232222-2a8bb927dd31/go.mod h1:/XxbfmMg8lxefKM7IXC3fBNl/7bRcc72aCRzEWrmP2Q=
 github.com/gomodule/redigo v2.0.0+incompatible/go.mod h1:B4C85qUVwatsJoIUNIfCRsp7qO0iAmpGFZ4EELWSbC4=
@@ -134,6 +136,8 @@ github.com/proio-org/go-proio-pb v0.0.0-20190115174119-b397ba922ba8 h1:dUhbMUF94
 github.com/proio-org/go-proio-pb v0.0.0-20190115174119-b397ba922ba8/go.mod h1:gbdLvpbwav5ue7P0Lkp5Nk2lKRHpVhchedmPETO0qxg=
 github.com/proio-org/go-proio-pb v0.0.0-20190201235049-82431b687b0f h1:OgAoX7oHmORlVGUIwxVmGwbIh6YlOZp8aC/2fydEviw=
 github.com/proio-org/go-proio-pb v0.0.0-20190201235049-82431b687b0f/go.mod h1:gbdLvpbwav5ue7P0Lkp5Nk2lKRHpVhchedmPETO0qxg=
+github.com/proio-org/go-proio-pb v0.0.0-20190409231233-b072f0d887c9 h1:JU1trqRsie7TZ30ix5BSIiwy5EDlqEVAj3/QQ09rxAM=
+github.com/proio-org/go-proio-pb v0.0.0-20190409231233-b072f0d887c9/go.mod h1:abujX6i2JY69s5/Q8SQPvb84Cbbbr0BoRopM0XdvnNQ=
 github.com/prometheus/client_golang v0.8.0/go.mod h1:7SWBe2y4D6OKWSNQJUaRYU/AaXPKyh/dDVn+NZz0KFw=
 github.com/prometheus/client_golang v0.9.1/go.mod h1:7SWBe2y4D6OKWSNQJUaRYU/AaXPKyh/dDVn+NZz0KFw=
 github.com/prometheus/client_golang v0.9.2/go.mod h1:OsXs2jCmiKlQ1lTBmv21f2mNfw4xf/QclQDMrYNZzcM=
