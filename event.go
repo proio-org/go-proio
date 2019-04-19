@@ -53,7 +53,7 @@ func CopyEvent(event *Event) *Event {
 // used to persistently reference the entry.  For example, pass the ID TagEntry
 // to add additional tags to the entry.
 func (evt *Event) AddEntry(tag string, entry protobuf.Message) uint64 {
-	typeID := evt.getTypeID(entry)
+	typeID, _ := evt.getTypeIDForEntry(entry)
 	entryProto := &proto.Any{
 		Type: typeID,
 	}
@@ -67,6 +67,35 @@ func (evt *Event) AddEntry(tag string, entry protobuf.Message) uint64 {
 	evt.TagEntry(id, tag)
 
 	return id
+}
+
+// AddSerializedEntry takes a single primary tag for an entry, a serialized
+// entry protobuf message, a protobuf type string, and a gzip-compressed
+// protobuf descriptor byte string (obtained from message's Descriptor()
+// receiver), and returns a new ID number for the entry.
+func (evt *Event) AddSerializedEntry(
+	tag string,
+	wireData []byte,
+	pbType string,
+	descriptor []byte,
+) (id uint64, err error) {
+	typeID, err := evt.getTypeIDForName(pbType, descriptor)
+	if err != nil {
+		return
+	}
+
+	entryProto := &proto.Any{
+		Type:    typeID,
+		Payload: wireData,
+	}
+
+	evt.proto.NEntries++
+	id = evt.proto.NEntries
+	evt.proto.Entry[id] = entryProto
+
+	evt.TagEntry(id, tag)
+
+	return
 }
 
 // AddEntries is like AddEntry, except that it is variadic, taking an arbitrary
@@ -305,14 +334,54 @@ type descriptorer interface {
 	Descriptor() ([]byte, []int)
 }
 
-func (evt *Event) getTypeID(entry protobuf.Message) uint64 {
-	typeName := protobuf.MessageName(entry)
+func (evt *Event) getTypeIDForEntry(entry protobuf.Message) (typeID uint64, err error) {
+	var inStore bool
+	typeID, inStore = evt.getTypeID(protobuf.MessageName(entry))
+
+	if !inStore {
+		descEntry, ok := entry.(descriptorer)
+		if ok {
+			fdComp, _ := descEntry.Descriptor()
+
+			gzipReader, _ := gzip.NewReader(bytes.NewReader(fdComp))
+			fdBytes, _ := ioutil.ReadAll(gzipReader)
+
+			err = addFDFromBytes(fdBytes)
+		} else {
+			err = errors.New("entry does not have Descriptor() receiver")
+		}
+	}
+
+	return
+}
+
+func (evt *Event) getTypeIDForName(name string, fdComp []byte) (typeID uint64, err error) {
+	var inStore bool
+	typeID, inStore = evt.getTypeID(name)
+
+	if !inStore {
+		var gzipReader *gzip.Reader
+		gzipReader, err = gzip.NewReader(bytes.NewReader(fdComp))
+		if err != nil {
+			return
+		}
+		fdBytes, _ := ioutil.ReadAll(gzipReader)
+
+		err = addFDFromBytes(fdBytes)
+	}
+
+	return
+}
+
+func (evt *Event) getTypeID(typeName string) (uint64, bool) {
 	typeID, ok := evt.revTypeLookup[typeName]
+
+	inStore := true
 	if !ok {
 		for id, name := range evt.proto.Type {
 			if name == typeName {
 				evt.revTypeLookup[typeName] = id
-				return id
+				return id, inStore
 			}
 		}
 
@@ -321,21 +390,10 @@ func (evt *Event) getTypeID(entry protobuf.Message) uint64 {
 		evt.proto.Type[typeID] = typeName
 		evt.revTypeLookup[typeName] = typeID
 
-		_, ok := fdProtoForTypeStore.Load(typeName)
-		if !ok {
-			descEntry, ok := entry.(descriptorer)
-			if ok {
-				fdComp, _ := descEntry.Descriptor()
-
-				gzipReader, _ := gzip.NewReader(bytes.NewReader(fdComp))
-				fdBytes, _ := ioutil.ReadAll(gzipReader)
-
-				addFDFromBytes(fdBytes)
-			}
-		}
+		_, inStore = fdProtoForTypeStore.Load(typeName)
 	}
 
-	return typeID
+	return typeID, inStore
 }
 
 func (evt *Event) tagCleanup() {
