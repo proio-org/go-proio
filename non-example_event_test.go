@@ -332,3 +332,34 @@ func TestCopyEvent(t *testing.T) {
 		t.Errorf("New event metadata are not independent")
 	}
 }
+
+func TestAddSerializedEntry(t *testing.T) {
+	desc, _ := (&example.Particle{}).Descriptor()
+
+	event := NewEvent()
+	id, err := event.AddSerializedEntry(
+		"Test",
+		[]byte{},
+		"proio.model.example.Particle",
+		desc,
+	)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if event.GetEntry(id) == nil {
+		t.Errorf("Entry failed to deserialize")
+	}
+
+	id, err = event.AddSerializedEntry(
+		"Test",
+		[]byte{},
+		"proio.model.example.NotReal",
+		[]byte("garbage"),
+	)
+	if err == nil {
+		t.Errorf("bad descriptor data not caught")
+	}
+	if event.GetEntry(id) != nil {
+		t.Errorf("fake message type somehow deserialized?")
+	}
+}
