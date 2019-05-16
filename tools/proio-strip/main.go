@@ -18,6 +18,7 @@ var (
 	stripMetadata = flag.Bool("m", false, "strip all metadata")
 	compLevel     = flag.Int("c", 2, "output compression level: 0 for uncompressed, 1 for LZ4 compression, 2 for GZIP compression, 3 for LZMA compression")
 	readBufSize   = flag.Int("b", 10, "read buffer size in number of events")
+	maxEvents     = flag.Int("n", 0, "maximum number of events to read in")
 )
 
 func printUsage() {
@@ -132,9 +133,12 @@ func main() {
 			}
 
 			nEventsRead++
+			if *maxEvents > 0 && nEventsRead == *maxEvents {
+				break
+			}
 		}
 
-		if reader.Err == io.EOF {
+		if reader.Err == io.EOF || reader.Err == nil {
 			break
 		} else {
 			log.Print(reader.Err)
