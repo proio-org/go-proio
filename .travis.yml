@@ -23,17 +23,17 @@ matrix:
 
         - language: go
           stage: build
-          go: 1.10.x
-        - language: go
           go: 1.11.x
         - language: go
           go: 1.12.x
+        - language: go
+          go: 1.13.x
           install:
-              - go get golang.org/x/tools/cmd/cover
               - go get -t ./...
           script:
               - gofmt -w $(find -name "*.go")
               - git diff --exit-code
+              - go get golang.org/x/tools/cmd/cover
               - go test -v -race -covermode=atomic -coverprofile=coverage.txt
           after_success: bash <(curl -s https://codecov.io/bash)
           before_deploy:
